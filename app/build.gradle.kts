@@ -57,5 +57,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.accompanist.permissions)
     implementation("androidx.compose.material:material-icons-extended")
-
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
 }

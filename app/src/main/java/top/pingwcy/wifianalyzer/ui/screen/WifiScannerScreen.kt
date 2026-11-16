@@ -6,57 +6,38 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import kotlinx.coroutines.launch
-import top.pingwcy.wifianalyzer.ui.component.FilterChipRow
-import top.pingwcy.wifianalyzer.ui.component.WifiCard
-import top.pingwcy.wifianalyzer.data.WifiScanner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import top.pingwcy.wifianalyzer.model.BandFilter
 import top.pingwcy.wifianalyzer.model.WifiData
+import top.pingwcy.wifianalyzer.ui.WifiViewModel
+import top.pingwcy.wifianalyzer.ui.component.FilterChipRow
+import top.pingwcy.wifianalyzer.ui.component.WifiCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WifiScannerScreen(
-    wifiList: List<WifiData>,
-    isScanning: Boolean,
-    onListChange: (List<WifiData>) -> Unit,
-    onScanningChange: (Boolean) -> Unit,
+    // 删掉了原来的 onListChange 和 onScanningChange，因为 ViewModel 接管了
     onItemClick: (WifiData) -> Unit,
-    onOpenChannelAnalysis: () -> Unit
+    onOpenChannelAnalysis: () -> Unit,
+    // 获取 ViewModel 实例
+    viewModel: WifiViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
-    //    筛选状态（放这里即可，切换详情页回来时由 remember 保留在组合中；
-    //   若想跨页面保留，可提升到 WifiScannerApp，见下方说明）
+    // 订阅 ViewModel 的状态流
+    val uiState by viewModel.uiState.collectAsState()
+
     var bandFilter by remember { mutableStateOf(BandFilter.ALL) }
 
     val permissionsToRequest = arrayOf(
@@ -68,115 +49,91 @@ fun WifiScannerScreen(
             Manifest.permission.ACCESS_FINE_LOCATION
     )
 
+    // 处理 ViewModel 发过来的报错信息
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+        }
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val allGranted = permissions.values.all { it }
         if (allGranted) {
-            scope.launch {
-                onScanningChange(true)
-                try {
-                    val scanner = WifiScanner(context)
-                    val results = scanner.scan()
-                    onListChange(results)
-                    if (results.isEmpty()) {
-                        Toast.makeText(context, "未扫描到 WiFi，请检查 GPS 定位开关是否打开", Toast.LENGTH_LONG).show()
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(context, "扫描失败：${e.message}", Toast.LENGTH_LONG).show()
-                    onListChange(emptyList())
-                } finally {
-                    onScanningChange(false)
-                }
-            } // 结束 scope.launch
+            // 直接让 ViewModel 去扫描
+            viewModel.scan(context)
         } else {
             Toast.makeText(context, "你拒绝了权限，无法扫描", Toast.LENGTH_SHORT).show()
-            onScanningChange(false)
         }
-    } // 结束 permissionLauncher
+    }
 
-        // 按频段过滤（每次重组重新计算，列表很小，性能无压力）
-        val filteredList = remember(wifiList, bandFilter) {
-            wifiList.filter(bandFilter.match)
-        }
+    // 过滤列表
+    val filteredList = remember(uiState.wifiList, bandFilter) {
+        uiState.wifiList.filter(bandFilter.match)
+    }
 
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("WiFi 扫描器") },
-                    actions = {
-                        TextButton(onClick = onOpenChannelAnalysis) {
-                            Text("信道分析")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                )        }
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp)
-            ) {
-                Button(
-                    onClick = {
-                        val allGranted = permissionsToRequest.all {
-                            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                        }
-                        if (allGranted) {
-                            scope.launch {
-                                onScanningChange(true)
-                                try {
-                                    val scanner = WifiScanner(context)
-                                    val results = scanner.scan()
-                                    onListChange(results)
-                                    if (results.isEmpty()) {
-                                        Toast.makeText(context, "未扫描到 WiFi，请检查 GPS 定位开关是否打开", Toast.LENGTH_LONG).show()
-                                    }
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "扫描失败：${e.message}", Toast.LENGTH_LONG).show()
-                                    onListChange(emptyList())
-                                } finally {
-                                    onScanningChange(false)
-                                }
-                            }
-                        } else {
-                            permissionLauncher.launch(permissionsToRequest)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isScanning
-                ) {
-                    Text(if (isScanning) "扫描中..." else "开始扫描 WiFi")
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // ★ 新增：筛选按钮行
-                FilterChipRow(
-                    selected = bandFilter,
-                    onSelect = { bandFilter = it }
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // ★ 新增：数量提示（可选，体验更好）
-                Text(
-                    text = "共 ${filteredList.size} 个网络" +
-                            if (bandFilter != BandFilter.ALL) "（已筛选：${bandFilter.label}）" else "",
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                // ★ 改成 filteredList
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(filteredList) { wifi ->
-                        WifiCard(wifi = wifi, onClick = { onItemClick(wifi) })
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("WiFi 扫描器") },
+                actions = {
+                    TextButton(onClick = onOpenChannelAnalysis) {
+                        Text("信道分析")
                     }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            Button(
+                onClick = {
+                    val allGranted = permissionsToRequest.all {
+                        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                    }
+                    if (allGranted) {
+                        // 直接让 ViewModel 去扫描
+                        viewModel.scan(context)
+                    } else {
+                        permissionLauncher.launch(permissionsToRequest)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isScanning // 用 ViewModel 里的状态
+            ) {
+                Text(if (uiState.isScanning) "扫描中..." else "开始扫描 WiFi")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            FilterChipRow(
+                selected = bandFilter,
+                onSelect = { bandFilter = it }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "共 ${filteredList.size} 个网络" +
+                        if (bandFilter != BandFilter.ALL) "（已筛选：${bandFilter.label}）" else "",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(filteredList) { wifi ->
+                    WifiCard(wifi = wifi, onClick = { onItemClick(wifi) })
                 }
             }
         }
     }
+}
