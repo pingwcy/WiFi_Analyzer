@@ -1,3 +1,151 @@
 <resources>
-    <string name="app_name">WiFi Analyzer</string>
+    <string name="app_name">WiFi 分析器</string>
+
+    <!-- 顶部菜单 -->
+    <string name="menu_more">更多</string>
+    <string name="menu_channel_analysis">信道分析</string>
+    <string name="menu_local_channels">本机可用信道</string>
+    <string name="menu_switch_to_flat">切换为：全部列表</string>
+    <string name="menu_switch_to_grouped">切换为：按 SSID 聚合</string>
+
+    <!-- 主界面 -->
+    <string name="btn_start_scan">开始扫描 WiFi</string>
+    <string name="btn_scanning">扫描中…</string>
+    <string name="hidden_network">(隐藏网络)</string>
+    <string name="permission_denied">你拒绝了权限，无法扫描</string>
+
+    <!-- 计数文字 -->
+    <string name="count_grouped">共 %1$d 个 SSID · %2$d 个热点</string>
+    <string name="count_flat">共 %1$d 个网络</string>
+    <string name="count_filtered_suffix">（已筛选：%1$s）</string>
+
+    <!-- 弹窗 -->
+    <string name="dialog_channel_title">本机 Wi-Fi 能力</string>
+    <string name="dialog_current_domain">当前 Wi-Fi 监管域</string>
+    <string name="dialog_country_code_unknown">国家码：无法通过普通公开 API 直接读取</string>
+    <string name="dialog_allowed_channels">监管域允许使用的信道</string>
+    <string name="dialog_android_too_old">当前 Android 版本低于 Android 14，无法通过公开 API 获取监管域允许的信道。</string>
+    <string name="dialog_no_channels">未获取到允许使用的信道列表。请检查附近设备权限或设备系统是否支持该 API。</string>
+    <string name="dialog_channel_count">共 %1$d 个允许的信道</string>
+    <string name="dialog_channel_line">%1$s  |  Channel %2$d  |  %3$d MHz</string>
+    <string name="dialog_note">注：以上数据表示当前监管域允许 STA 模式使用的信道，不代表设备硬件支持的全部信道。</string>
+    <string name="btn_ok">知道了</string>
+
+    <!-- 频段名 -->
+    <string name="band_all">全部</string>
+    <string name="band_2g">2.4 GHz</string>
+    <string name="band_5g">5 GHz</string>
+    <string name="band_6g">6 GHz</string>
+    <string name="band_other">其他频段</string>
+
+    <!-- WifiCard 相关 -->
+    <string name="wifi_card_frequency">频率: %1$d MHz</string>
+    <string name="wifi_card_signal">信号: %1$d dBm</string>
+    <string name="wifi_card_width">频宽: %1$s</string>
+    <string name="wifi_card_channel">信道: %1$d</string>
+    <string name="wifi_card_country">国家: %1$s</string>
+    <!-- 通用 -->
+    <string name="btn_back">返回</string>
+    <string name="yes">是</string>
+    <string name="no">否</string>
+    <string name="none">无</string>
+
+    <!-- 分组标题 -->
+    <string name="section_basic_info">基本信息</string>
+    <string name="section_signal_channel">信号与信道</string>
+    <string name="section_capabilities">能力 / 加密</string>
+    <string name="section_bss_load">BSS Load（网络负载）</string>
+
+    <!-- 字段标签 -->
+    <string name="label_ssid">SSID</string>
+    <string name="label_bssid">BSSID</string>
+    <string name="label_is_hidden">是否隐藏</string>
+    <string name="label_band">频段</string>
+    <string name="label_wifi_standard">WiFi 标准</string>
+    <string name="label_ap_country_code">AP Country Code</string> <!-- 或者翻译成"AP 国家码" -->
+
+    <string name="label_signal_strength">信号强度</string>
+    <string name="label_primary_freq">主信道频率</string>
+    <string name="label_primary_channel">主信道号</string>
+    <string name="label_channel_width">信道宽度</string>
+    <string name="label_center_freq_0">中心频率 0</string>
+    <string name="label_center_freq_1">中心频率 1</string>
+    <string name="label_occupied_channels">占用信道</string>
+
+    <string name="label_station_count">关联站点数量</string>
+    <string name="label_channel_utilization">信道利用率</string>
+    <string name="label_available_capacity">剩余接纳容量</string>
+    <string name="bss_load_unavailable">未获取到 BSS Load 信息</string>
+
+    <!-- 数值格式化 -->
+    <string name="value_dbm">%1$d dBm</string>
+    <string name="value_mhz">%1$d MHz</string>
+    <string name="value_channel_num">%1$d</string> <!-- 如果只要个数字其实可以直接 toString，但为了统一也可以加 -->
+    <string name="value_occupied_channels">%1$s（%2$d 个）</string>
+    <string name="value_channel_utilization">%1$s%% (%2$d/255)</string>
+    <!-- 注意：在 XML 中写百分号要转义，用 %% 表示 % -->
+    <string name="value_available_capacity">%1$d (32 μs/s)</string>
+
+    <!-- ChannelAnalysisScreen -->
+    <string name="channel_analysis_title">信道使用分析</string>
+
+    <!-- 过滤条件 -->
+    <string name="band_2g_short">2.4G</string>
+    <string name="band_5g_short">5G</string>
+    <string name="band_6g_short">6G</string>
+
+    <!-- 开关项 -->
+    <string name="toggle_use_occupied_on">覆盖占用（宽信道展开）</string>
+    <string name="toggle_use_occupied_off">仅主信道</string>
+    <string name="toggle_show_empty_on">显示空白信道（0 占用）</string>
+    <string name="toggle_show_empty_off">仅显示有 AP 的信道</string>
+    <string name="toggle_ignore_weak_on">忽略弱信号（&lt; %1$d dBm）</string>
+    <string name="toggle_ignore_weak_off">统计全部信号</string>
+    <string name="label_threshold">阈值</string>
+
+    <!-- 空数据 -->
+    <string name="no_data_hint">暂无数据，请先返回列表扫描</string>
+    <!-- ChannelScoreDialog -->
+    <string name="score_dialog_title">CH %1$d 评分详情</string>
+
+    <!-- 总分部分 -->
+    <string name="score_total_label">综合得分：</string>
+    <string name="score_total_value">%1$d / 100</string>
+    <string name="score_avg_signal">平均信号 %1$s dBm</string>
+    <string name="score_avg_utilization"> · 平均利用率 %1$s%%</string>
+    <string name="score_no_bss_load"> · 无 BSS Load 数据</string>
+
+    <!-- 扣分明细 -->
+    <string name="score_details_title">扣分明细</string>
+    <string name="score_ap_count">AP 数量（%1$d 个）</string>
+    <string name="score_signal_strength">信号强度（平均）</string>
+    <string name="score_bss_load">BSS Load</string>
+    <string name="score_bss_load_no_data">BSS Load（无数据）</string>
+    <string name="score_total_penalty">合计扣分</string>
+
+    <!-- 各 AP 明细 -->
+    <string name="score_ap_details_title">各 AP 明细（%1$d）</string>
+    <string name="score_hidden_ssid">(隐藏)</string>
+
+    <!-- AP 详情拼接 -->
+    <string name="score_ap_rssi_penalty">RSSI %1$d dBm（扣 %2$d）</string>
+    <string name="score_ap_utilization"> · 利用率 %1$s%%（扣 %2$d）</string>
+    <string name="score_ap_sta"> · STA %1$d</string>
+    <string name="score_ap_no_bss_load"> · 无 BSS Load</string>
+
+    <string name="grade_excellent">优秀</string>
+    <string name="grade_good">良好</string>
+    <string name="grade_fair">一般</string>
+    <string name="grade_crowded">拥挤</string>
+
+    <!-- WifiGroupHeader -->
+    <string name="group_collapse">收起</string>
+    <string name="group_expand">展开</string>
+    <string name="group_subtitle">%1$d 个热点 · 最强 %2$d dBm · %3$s</string>
+    <string name="btn_detail">详情</string>
+
+    <!-- 关闭按钮 -->
+    <string name="btn_close">关闭</string>
+    <!-- 默认值 -->
+    <string name="unknown">未知</string>
 </resources>

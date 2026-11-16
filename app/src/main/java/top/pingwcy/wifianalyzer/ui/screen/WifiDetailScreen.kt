@@ -20,8 +20,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.ui.component.DetailRow
 import top.pingwcy.wifianalyzer.ui.component.DetailSection
 import top.pingwcy.wifianalyzer.domain.ChannelCalculator
@@ -32,15 +34,17 @@ import kotlin.text.ifEmpty
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WifiDetailScreen(wifi: WifiData, onBack: () -> Unit) {
+    // 处理 SSID 为空的情况
+    val displaySsid = if (wifi.ssid.isBlank()) stringResource(R.string.hidden_network) else wifi.ssid
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(wifi.ssid) },
+                title = { Text(displaySsid) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
+                            contentDescription = stringResource(R.string.btn_back)
                         )
                     }
                 },
@@ -57,43 +61,66 @@ fun WifiDetailScreen(wifi: WifiData, onBack: () -> Unit) {
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            DetailSection(title = "基本信息") {
-                DetailRow("SSID", wifi.ssid)
-                DetailRow("BSSID", wifi.bssid)
-                DetailRow("是否隐藏", if (wifi.isHidden) "是" else "否")
-                DetailRow("频段", wifi.band)
-                DetailRow("WiFi 标准", wifi.wifiStandard)
-                DetailRow("AP Country Code", wifi.countryCode)
+            DetailSection(title = stringResource(R.string.section_basic_info)) {
+                DetailRow(stringResource(R.string.label_ssid), displaySsid)
+                DetailRow(stringResource(R.string.label_bssid), wifi.bssid)
+                DetailRow(
+                    stringResource(R.string.label_is_hidden),
+                    stringResource(if (wifi.isHidden) R.string.yes else R.string.no)
+                )
+                DetailRow(stringResource(R.string.label_band), wifi.band)
+                DetailRow(stringResource(R.string.label_wifi_standard), wifi.wifiStandard)
+                DetailRow(stringResource(R.string.label_ap_country_code), wifi.countryCode)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            DetailSection(title = "信号与信道") {
+            DetailSection(title = stringResource(R.string.section_signal_channel)) {
                 DetailRow(
-                    "信号强度",
-                    "${wifi.rssi} dBm",
+                    stringResource(R.string.label_signal_strength),
+                    stringResource(R.string.value_dbm, wifi.rssi),
                     valueColor = when {
                         wifi.rssi >= -50 -> Color(0xFF4CAF50)
                         wifi.rssi >= -70 -> Color(0xFFFF9800)
                         else -> Color(0xFFF44336)
                     }
                 )
-                DetailRow("主信道频率", "${wifi.frequency} MHz")
-                DetailRow("主信道号", "${wifi.primaryChannel}")
-                DetailRow("信道宽度", WifiStandards.widthText(wifi.channelWidth))
-                DetailRow("中心频率 0", if (wifi.centerFreq0 > 0) "${wifi.centerFreq0} MHz" else "无")
-                DetailRow("中心频率 1", if (wifi.centerFreq1 > 0) "${wifi.centerFreq1} MHz" else "无")
-                val occChannels = ChannelCalculator.occupiedChannels(wifi)
                 DetailRow(
-                    "占用信道",
-                    "${occChannels.joinToString(" ")}（${occChannels.size} 个）"
-                )            }
+                    stringResource(R.string.label_primary_freq),
+                    stringResource(R.string.value_mhz, wifi.frequency)
+                )
+                DetailRow(
+                    stringResource(R.string.label_primary_channel),
+                    wifi.primaryChannel.toString() // 不需要单位，直接 toString 即可
+                )
+                DetailRow(
+                    stringResource(R.string.label_channel_width),
+                    WifiStandards.widthText(wifi.channelWidth)
+                )
+                DetailRow(
+                    stringResource(R.string.label_center_freq_0),
+                    if (wifi.centerFreq0 > 0) stringResource(R.string.value_mhz, wifi.centerFreq0)
+                    else stringResource(R.string.none)
+                )
+                DetailRow(
+                    stringResource(R.string.label_center_freq_1),
+                    if (wifi.centerFreq1 > 0) stringResource(R.string.value_mhz, wifi.centerFreq1)
+                    else stringResource(R.string.none)
+                )
+
+                val occChannels = ChannelCalculator.occupiedChannels(wifi)
+                val occText = occChannels.joinToString(" ")
+                DetailRow(
+                    stringResource(R.string.label_occupied_channels),
+                    stringResource(R.string.value_occupied_channels, occText, occChannels.size)
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            DetailSection(title = "能力 / 加密") {
+            DetailSection(title = stringResource(R.string.section_capabilities)) {
                 Text(
-                    text = wifi.capabilities.ifEmpty { "未知" },
+                    text = wifi.capabilities.ifEmpty { stringResource(R.string.unknown) },
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 4.dp)
@@ -102,40 +129,33 @@ fun WifiDetailScreen(wifi: WifiData, onBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            DetailSection(title = "BSS Load（网络负载）") {
-
+            DetailSection(title = stringResource(R.string.section_bss_load)) {
                 val bssLoad = wifi.bssLoad
-
                 if (bssLoad != null) {
-
                     DetailRow(
-                        "关联站点数量",
-                        "${bssLoad.stationCount}"
+                        stringResource(R.string.label_station_count),
+                        bssLoad.stationCount.toString()
+                    )
+
+                    val utilStr = "%.2f".format(bssLoad.channelUtilization * 100.0 / 255.0)
+                    DetailRow(
+                        stringResource(R.string.label_channel_utilization),
+                        stringResource(R.string.value_channel_utilization, utilStr, bssLoad.channelUtilization)
                     )
 
                     DetailRow(
-                        "信道利用率",
-                        "${"%.2f".format(
-                            bssLoad.channelUtilization * 100.0 / 255.0
-                        )}% (${bssLoad.channelUtilization}/255)"
+                        stringResource(R.string.label_available_capacity),
+                        stringResource(R.string.value_available_capacity, bssLoad.availableAdmissionCapacity)
                     )
-
-                    DetailRow(
-                        "剩余接纳容量",
-                        "${bssLoad.availableAdmissionCapacity} (32 μs/s)"
-                    )
-
                 } else {
                     Text(
-                        text = "未获取到 BSS Load 信息",
+                        text = stringResource(R.string.bss_load_unavailable),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
             }
-
-
         }
     }
 }

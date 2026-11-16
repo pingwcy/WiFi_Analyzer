@@ -14,7 +14,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.domain.ChannelScore
 import top.pingwcy.wifianalyzer.model.ChannelUsage
-
+import androidx.compose.ui.res.stringResource
+import top.pingwcy.wifianalyzer.R
+import top.pingwcy.wifianalyzer.domain.Grade
 @Composable
 fun ChannelBarRow(
     item: ChannelUsage,
@@ -63,11 +65,17 @@ fun ChannelBarRow(
             color = color,
             modifier = Modifier.width(34.dp)
         )
+        val gradeText = when (s.grade) {
+            Grade.EXCELLENT -> stringResource(R.string.grade_excellent)
+            Grade.GOOD -> stringResource(R.string.grade_good)
+            Grade.FAIR -> stringResource(R.string.grade_fair)
+            Grade.CROWDED -> stringResource(R.string.grade_crowded)
+        }
+
         Text(
-            text = s.grade,
-            fontSize = 11.sp,
-            color = Color.Gray,
-            modifier = Modifier.width(34.dp)
+            text = gradeText, //  改成转换后的字符串
+            fontSize = 12.sp, // 截图里可能没显示，估计字号差不多是这个
+            color = Color.Gray
         )
     }
 }

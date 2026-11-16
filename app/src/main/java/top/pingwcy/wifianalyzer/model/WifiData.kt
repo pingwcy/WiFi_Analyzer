@@ -16,7 +16,10 @@ data class WifiData(
         val countryCode: String,  // AP 广播的 802.11d 国家码
         val bssLoad: BssLoad? = null
 )
-
+// 适用于国家码
+enum class CountryCodeState {
+        NOT_SUPPORTED, NOT_BROADCAST, INCOMPLETE, INVALID, READ_FAILED, VALID
+}
 data class BssLoad(
         val stationCount: Int,
         val channelUtilization: Int,

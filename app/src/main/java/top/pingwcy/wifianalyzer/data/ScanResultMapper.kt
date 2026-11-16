@@ -62,8 +62,8 @@ fun ScanResult.toWifiData(): WifiData {
     val cf1 = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) this.centerFreq1 else 0
 
     return WifiData(
-        ssid = this.SSID.ifEmpty { "隐藏网络" },
-        bssid = this.BSSID ?: "未知",
+        ssid = this.SSID,
+        bssid = this.BSSID ?: "",
         frequency = freq,
         rssi = this.level,
         channelWidth = chWidth,
@@ -82,15 +82,15 @@ fun ScanResult.toWifiData(): WifiData {
 }
 
 private fun ScanResult.getCountryCode(): String {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return "不支持"
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return "" // 返回空串代表不支持
     return try {
-        val countryIe = this.informationElements?.firstOrNull { it.id == 7 } ?: return "未广播"
+        val countryIe = this.informationElements?.firstOrNull { it.id == 7 } ?: return "" // 未广播返回空
         val buffer = countryIe.bytes.duplicate()
-        if (buffer.remaining() < 3) return "数据不完整"
+        if (buffer.remaining() < 3) return "" // 不完整
         val country = ByteArray(2)
         buffer.get(country)
-        String(country, Charsets.US_ASCII).takeIf { it.matches(Regex("[A-Z]{2}")) } ?: "无效数据"
+        String(country, Charsets.US_ASCII).takeIf { it.matches(Regex("[A-Z]{2}")) } ?: "" // 无效返回空
     } catch (e: Exception) {
-        "读取失败"
+        "" // 读取失败返回空
     }
 }

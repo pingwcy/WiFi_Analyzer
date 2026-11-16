@@ -35,6 +35,9 @@ import top.pingwcy.wifianalyzer.ui.component.WifiCard
 import top.pingwcy.wifianalyzer.model.groupKey
 import top.pingwcy.wifianalyzer.ui.SortMode
 import top.pingwcy.wifianalyzer.ui.component.WifiGroupHeader
+import androidx.compose.ui.res.stringResource
+import top.pingwcy.wifianalyzer.R
+
 data class WifiGroup(
     val key: String,
     val ssid: String,          // 隐藏网络显示 "(隐藏网络)"
@@ -102,7 +105,7 @@ fun WifiScannerScreen(
         if (allGranted) {
             viewModel.scan(context)
         } else {
-            Toast.makeText(context, "你拒绝了权限，无法扫描", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.permission_denied, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -113,25 +116,25 @@ fun WifiScannerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("WiFi 分析器") },
+                title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     // 三个点菜单
                     IconButton(onClick = { showMenu = !showMenu }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "更多")
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.menu_more))
                     }
                     DropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("信道分析") },
+                            text = { Text(stringResource(R.string.menu_channel_analysis)) },
                             onClick = {
                                 showMenu = false
                                 onOpenChannelAnalysis()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("本机可用信道") },
+                            text = { Text(stringResource(R.string.menu_local_channels)) },
                             onClick = {
                                 showMenu = false
                                 showChannelInfoDialog = true
@@ -139,13 +142,18 @@ fun WifiScannerScreen(
                         )
                         DropdownMenuItem(
                             text = {
+                                // ✅ 根据当前的排序模式，提示用户“切换后”会变成什么
                                 Text(
-                                    if (uiState.sortMode == SortMode.GROUPED) "切换为：全部列表"
-                                    else "切换为：按 SSID 聚合"
+                                    if (uiState.sortMode == SortMode.GROUPED) {
+                                        stringResource(R.string.menu_switch_to_flat)
+                                    } else {
+                                        stringResource(R.string.menu_switch_to_grouped)
+                                    }
                                 )
                             },
                             onClick = {
                                 showMenu = false
+                                // 切换逻辑没问题，保持原样
                                 viewModel.setSortMode(
                                     if (uiState.sortMode == SortMode.GROUPED) SortMode.FLAT else SortMode.GROUPED
                                 )
@@ -183,7 +191,10 @@ fun WifiScannerScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isScanning
             ) {
-                Text(if (uiState.isScanning) "扫描中..." else "开始扫描 WiFi")
+                Text(
+                    if (uiState.isScanning) stringResource(R.string.btn_scanning)
+                    else stringResource(R.string.btn_start_scan)
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -206,15 +217,26 @@ fun WifiScannerScreen(
                     filteredList.sortedByDescending { it.rssi }
                 else emptyList()
             }
-            val countText = when (uiState.sortMode) {
-                SortMode.GROUPED ->
-                    "共 ${groupedList.size} 个 SSID · ${filteredList.size} 个热点" +
-                            if (bandFilter != BandFilter.ALL) "（已筛选：${bandFilter.label}）" else ""
+// 先把筛选名取出来（Composable 上下文）
+            val filterLabel = if (bandFilter != BandFilter.ALL)
+                stringResource(bandFilter.labelRes)   // 或 bandFilter.labelText()
+            else null
 
-                SortMode.FLAT ->
-                    "共 ${filteredList.size} 个网络" +
-                            if (bandFilter != BandFilter.ALL) "（已筛选：${bandFilter.label}）" else ""
+// 主文案
+            val baseText = when (uiState.sortMode) {
+                SortMode.GROUPED -> stringResource(
+                    R.string.count_grouped, groupedList.size, filteredList.size
+                )
+                SortMode.FLAT -> stringResource(
+                    R.string.count_flat, filteredList.size
+                )
             }
+
+// 条件后缀
+            val countText = if (filterLabel != null)
+                baseText + stringResource(R.string.count_filtered_suffix, filterLabel)
+            else
+                baseText
 
             Text(
                 text = countText, fontSize = 12.sp, color = Color.Gray,
@@ -305,69 +327,64 @@ fun WifiScannerScreen(
                     showChannelInfoDialog = false
                 },
                 title = {
-                    Text("本机 Wi-Fi 能力")
+                    Text(stringResource(R.string.dialog_channel_title)) // ✅ 本机 Wi-Fi 能力
                 },
                 text = {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 400.dp) // 2. 限制最高高度，防止弹窗占满全屏
+                            .heightIn(max = 400.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        Text("当前 Wi-Fi 监管域")
+                        Text(stringResource(R.string.dialog_current_domain)) // ✅ 当前 Wi-Fi 监管域
 
                         Text(
-                            "国家码：无法通过普通公开 API 直接读取",
+                            stringResource(R.string.dialog_country_code_unknown), // ✅ 国家码：无法通过...
                             fontSize = 12.sp,
                             color = Color.Gray
                         )
 
                         Spacer(Modifier.height(12.dp))
 
-                        Text("监管域允许使用的信道")
+                        Text(stringResource(R.string.dialog_allowed_channels)) // ✅ 监管域允许使用的信道
 
                         Spacer(Modifier.height(6.dp))
 
                         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-
                             Text(
-                                "当前 Android 版本低于 Android 14，" +
-                                        "无法通过公开 API 获取监管域允许的信道。",
+                                stringResource(R.string.dialog_android_too_old), // ✅ 当前 Android 版本低于...
                                 color = Color.Red,
                                 fontSize = 12.sp
                             )
-
                         } else if (supportedFrequencies.isEmpty()) {
-
                             Text(
-                                "未获取到允许使用的信道列表。" +
-                                        "请检查附近设备权限或设备系统是否支持该 API。",
+                                stringResource(R.string.dialog_no_channels), // ✅ 未获取到允许使用的信道列表...
                                 color = Color.Red,
                                 fontSize = 12.sp
                             )
-
                         } else {
-
+                            // ✅ 带参数：共 %1$d 个允许的信道
                             Text(
-                                "共 ${supportedFrequencies.size} 个允许的信道",
+                                stringResource(R.string.dialog_channel_count, supportedFrequencies.size),
                                 color = Color(0xFF4CAF50)
                             )
 
                             Spacer(Modifier.height(8.dp))
 
                             supportedFrequencies.forEach { freq ->
-
                                 val channel = frequencyToChannel(freq)
 
+                                // ✅ 这里的频段名称也提取了资源
                                 val bandName = when (freq) {
-                                    in 2400..2500 -> "2.4 GHz"
-                                    in 4900..5900 -> "5 GHz"
-                                    in 5925..7125 -> "6 GHz"
-                                    else -> "其他频段"
+                                    in 2400..2500 -> stringResource(R.string.band_2g)
+                                    in 4900..5900 -> stringResource(R.string.band_5g)
+                                    in 5925..7125 -> stringResource(R.string.band_6g)
+                                    else -> stringResource(R.string.band_other)
                                 }
 
+                                // ✅ 带参数：%1$s  |  Channel %2$d  |  %3$d MHz
                                 Text(
-                                    "$bandName  |  Channel $channel  |  $freq MHz",
+                                    stringResource(R.string.dialog_channel_line, bandName, channel, freq),
                                     fontSize = 12.sp,
                                     color = Color.Gray
                                 )
@@ -377,8 +394,7 @@ fun WifiScannerScreen(
                         Spacer(Modifier.height(12.dp))
 
                         Text(
-                            "注：以上数据表示当前监管域允许 STA 模式使用的信道，" +
-                                    "不代表设备硬件支持的全部信道。",
+                            stringResource(R.string.dialog_note), // ✅ 注：以上数据表示当前监管域允许...
                             fontSize = 11.sp,
                             color = Color.Gray
                         )
@@ -390,7 +406,7 @@ fun WifiScannerScreen(
                             showChannelInfoDialog = false
                         }
                     ) {
-                        Text("知道了")
+                        Text(stringResource(R.string.btn_ok)) // ✅ 知道了
                     }
                 }
             )

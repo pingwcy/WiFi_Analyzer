@@ -1,0 +1,138 @@
+<resources>
+    <string name="app_name">WiFi Analyzer</string>
+    <string name="menu_more">More</string>
+    <string name="menu_channel_analysis">Channel Analysis</string>
+    <string name="menu_local_channels">Local Available Channels</string>
+    <string name="menu_switch_to_flat">Switch to: Flat List</string>
+    <string name="menu_switch_to_grouped">Switch to: Group by SSID</string>
+    <string name="btn_start_scan">Start Scanning WiFi</string>
+    <string name="btn_scanning">Scanning…</string>
+    <string name="hidden_network">(Hidden Network)</string>
+    <string name="permission_denied">Permission denied, cannot scan</string>
+    <string name="count_grouped">%1$d SSIDs · %2$d networks</string>
+    <string name="count_flat">%1$d networks</string>
+    <string name="count_filtered_suffix"> (filtered: %1$s)</string>
+    <string name="dialog_channel_title">Device Wi-Fi Capabilities</string>
+    <string name="dialog_current_domain">Current Wi-Fi Regulatory Domain</string>
+    <string name="dialog_country_code_unknown">Country code: not readable via public API</string>
+    <string name="dialog_allowed_channels">Allowed Channels in Regulatory Domain</string>
+    <string name="dialog_android_too_old">Android version is below 14, cannot retrieve allowed channels via public API.</string>
+    <string name="dialog_no_channels">No allowed channels retrieved. Check nearby-devices permission or device support.</string>
+    <string name="dialog_channel_count">%1$d allowed channels</string>
+    <string name="dialog_channel_line">%1$s  |  Channel %2$d  |  %3$d MHz</string>
+    <string name="dialog_note">Note: Data shows channels allowed for STA mode in the current regulatory domain, not all hardware-supported channels.</string>
+    <string name="btn_ok">Got it</string>
+    <string name="band_all">All</string>
+    <string name="band_2g">2.4 GHz</string>
+    <string name="band_5g">5 GHz</string>
+    <string name="band_6g">6 GHz</string>
+    <string name="band_other">Other</string>
+    <!-- WifiCard 相关 -->
+    <string name="wifi_card_frequency">Freq: %1$d MHz</string>
+    <string name="wifi_card_signal">Signal: %1$d dBm</string>
+    <string name="wifi_card_width">Width: %1$s</string>
+    <string name="wifi_card_channel">Channel: %1$d</string>
+    <string name="wifi_card_country">Country: %1$s</string>
+    <!-- 通用 -->
+    <string name="btn_back">Return</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="none">None</string>
+
+    <!-- 分组标题 -->
+    <string name="section_basic_info">Basic Information</string>
+    <string name="section_signal_channel">Signal and Channel</string>
+    <string name="section_capabilities">Capabilities / Encryption</string>
+    <string name="section_bss_load">BSS Load</string>
+
+    <!-- 字段标签 -->
+    <string name="label_ssid">SSID</string>
+    <string name="label_bssid">BSSID</string>
+    <string name="label_is_hidden">IsHidden</string>
+    <string name="label_band">Band</string>
+    <string name="label_wifi_standard">WiFi Standard</string>
+    <string name="label_ap_country_code">AP Country Code</string> <!-- 或者翻译成"AP 国家码" -->
+
+    <string name="label_signal_strength">Signal Strength</string>
+    <string name="label_primary_freq">Main Channel Freq</string>
+    <string name="label_primary_channel">Main Channel Num</string>
+    <string name="label_channel_width">Channel Witdh</string>
+    <string name="label_center_freq_0">CenterFreq 0</string>
+    <string name="label_center_freq_1">CenterFreq 1</string>
+    <string name="label_occupied_channels">Occupied Channels</string>
+
+    <string name="label_station_count">Associated STA</string>
+    <string name="label_channel_utilization">Channel Utilization</string>
+    <string name="label_available_capacity">Remain Capability</string>
+    <string name="bss_load_unavailable">No BSS Load Info</string>
+
+    <!-- 数值格式化 -->
+    <string name="value_dbm">%1$d dBm</string>
+    <string name="value_mhz">%1$d MHz</string>
+    <string name="value_channel_num">%1$d</string> <!-- 如果只要个数字其实可以直接 toString，但为了统一也可以加 -->
+    <string name="value_occupied_channels">%1$s（%2$d Chs）</string>
+    <string name="value_channel_utilization">%1$s%% (%2$d/255)</string>
+    <!-- 注意：在 XML 中写百分号要转义，用 %% 表示 % -->
+    <string name="value_available_capacity">%1$d (32 μs/s)</string>
+    <!-- ChannelAnalysisScreen -->
+    <string name="channel_analysis_title">Channel Usage Analysis</string>
+
+    <!-- 过滤条件 -->
+    <string name="band_2g_short">2.4G</string>
+    <string name="band_5g_short">5G</string>
+    <string name="band_6g_short">6G</string>
+
+    <!-- 开关项 -->
+    <string name="toggle_use_occupied_on">Cover All（Expand Occupied）</string>
+    <string name="toggle_use_occupied_off">Only Main Channel</string>
+    <string name="toggle_show_empty_on">Show 0 Occupied Channels</string>
+    <string name="toggle_show_empty_off">Show Channels with at least one AP</string>
+    <string name="toggle_ignore_weak_on">Ignore Weak Signals（&lt; %1$d dBm）</string>
+    <string name="toggle_ignore_weak_off">Show All Signals</string>
+    <string name="label_threshold">Threshold</string>
+
+    <!-- 空数据 -->
+    <string name="no_data_hint">No data, make scan first</string>
+    <!-- ChannelScoreDialog -->
+    <string name="score_dialog_title">CH %1$d Grade Info</string>
+
+    <!-- 总分部分 -->
+    <string name="score_total_label">Score：</string>
+    <string name="score_total_value">%1$d / 100</string>
+    <string name="score_avg_signal">Average Signal %1$s dBm</string>
+    <string name="score_avg_utilization"> · Average Uagse %1$s%%</string>
+    <string name="score_no_bss_load"> · No BSS Load Data</string>
+
+    <!-- 扣分明细 -->
+    <string name="score_details_title">Scoring Detail</string>
+    <string name="score_ap_count">AP Count（%1$d）</string>
+    <string name="score_signal_strength">Signal Strength（Average）</string>
+    <string name="score_bss_load">BSS Load</string>
+    <string name="score_bss_load_no_data">BSS Load（No Data）</string>
+    <string name="score_total_penalty">All Penalty</string>
+
+    <!-- 各 AP 明细 -->
+    <string name="score_ap_details_title">Per AP Detail（%1$d）</string>
+    <string name="score_hidden_ssid">(Hidden)</string>
+
+    <!-- AP 详情拼接 -->
+    <string name="score_ap_rssi_penalty">RSSI %1$d dBm（- %2$d）</string>
+    <string name="score_ap_utilization"> · Utilization %1$s%%（- %2$d）</string>
+    <string name="score_ap_sta"> · STA %1$d</string>
+    <string name="score_ap_no_bss_load"> · No BSS Load</string>
+
+    <string name="grade_excellent">Excellent</string>
+    <string name="grade_good">Good</string>
+    <string name="grade_fair">Normal</string>
+    <string name="grade_crowded">Crowded</string>
+
+    <!-- WifiGroupHeader -->
+    <string name="group_collapse">Fold</string>
+    <string name="group_expand">Span</string>
+    <string name="group_subtitle">%1$d APs · Strongest %2$d dBm · %3$s</string>
+    <string name="btn_detail">Detail</string>
+    <!-- 关闭按钮 -->
+    <string name="btn_close">Close</string>
+    <!-- 默认值 -->
+    <string name="unknown">?</string>
+</resources>

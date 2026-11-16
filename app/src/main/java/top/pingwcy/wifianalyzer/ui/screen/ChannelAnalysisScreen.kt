@@ -26,6 +26,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import top.pingwcy.wifianalyzer.model.ChannelUsage
 import  top.pingwcy.wifianalyzer.ui.component.ChannelScoreDialog
+import androidx.compose.ui.res.stringResource
+import top.pingwcy.wifianalyzer.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChannelAnalysisScreen(
@@ -55,11 +58,24 @@ fun ChannelAnalysisScreen(
         )
     }
     val maxCount = usage.maxOfOrNull { it.count } ?: 1
+    val bandOptions = listOf(
+        null to R.string.band_all,
+        "2.4 GHz" to R.string.band_2g_short,
+        "5 GHz" to R.string.band_5g_short,
+        "6 GHz" to R.string.band_6g_short
+    )
+    bandOptions.forEach { (value, labelRes) ->
+        FilterChip(
+            selected = band == value,
+            onClick = { band = value },
+            label = { Text(stringResource(labelRes)) }
+        )
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("信道使用分析") },
+                title = { Text(stringResource(R.string.channel_analysis_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -76,7 +92,7 @@ fun ChannelAnalysisScreen(
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("本机可用信道") },
+                            text = { Text(stringResource(R.string.menu_local_channels)) },
                             onClick = {
                                 showMenu = false
                                 showChannelInfoDialog = true
@@ -100,18 +116,22 @@ fun ChannelAnalysisScreen(
         ) {
             // 频段筛选
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf<Pair<String?, String>>(
-                    null to "全部", "2.4 GHz" to "2.4G",
-                    "5 GHz" to "5G", "6 GHz" to "6G"
-                ).forEach { (value, label) ->
+                // 左边是业务逻辑用的字符串（不翻译），右边是 UI 显示的资源 ID（翻译）
+                val bandOptions = listOf(
+                    null to R.string.band_all,
+                    "2.4 GHz" to R.string.band_2g_short,
+                    "5 GHz" to R.string.band_5g_short,
+                    "6 GHz" to R.string.band_6g_short
+                )
+
+                bandOptions.forEach { (value, labelRes) ->
                     FilterChip(
                         selected = band == value,
                         onClick = { band = value },
-                        label = { Text(label) }
+                        label = { Text(stringResource(labelRes)) }
                     )
                 }
             }
-
             Spacer(Modifier.height(8.dp))
 
             // 统计口径开关
@@ -119,7 +139,8 @@ fun ChannelAnalysisScreen(
                 Switch(checked = useOccupied, onCheckedChange = { useOccupied = it })
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (useOccupied) "覆盖占用（宽信道展开）" else "仅主信道",
+                    if (useOccupied) stringResource(R.string.toggle_use_occupied_on)
+                    else stringResource(R.string.toggle_use_occupied_off),
                     fontSize = 13.sp, color = Color.Gray
                 )
             }
@@ -128,7 +149,8 @@ fun ChannelAnalysisScreen(
                 Switch(checked = showEmpty, onCheckedChange = { showEmpty = it })
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (showEmpty) "显示空白信道（0 占用）" else "仅显示有 AP 的信道",
+                    if (showEmpty) stringResource(R.string.toggle_show_empty_on)
+                    else stringResource(R.string.toggle_show_empty_off),
                     fontSize = 13.sp, color = Color.Gray
                 )
             }
@@ -138,13 +160,14 @@ fun ChannelAnalysisScreen(
                 Switch(checked = ignoreWeak, onCheckedChange = { ignoreWeak = it })
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (ignoreWeak) "忽略弱信号（< $weakThreshold dBm）" else "统计全部信号",
+                    if (ignoreWeak) stringResource(R.string.toggle_ignore_weak_on, weakThreshold)
+                    else stringResource(R.string.toggle_ignore_weak_off),
                     fontSize = 13.sp, color = Color.Gray
                 )
             }
             if (ignoreWeak) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("阈值", fontSize = 13.sp, color = Color.Gray)
+                    Text(stringResource(R.string.label_threshold), fontSize = 13.sp, color = Color.Gray)
                     Slider(
                         value = weakThreshold.toFloat(),
                         onValueChange = { weakThreshold = it.toInt() },
@@ -161,7 +184,7 @@ fun ChannelAnalysisScreen(
             Spacer(Modifier.height(12.dp))
 
             if (usage.isEmpty()) {
-                Text("暂无数据，请先返回列表扫描", color = Color.Gray)
+                Text(stringResource(R.string.no_data_hint), color = Color.Gray)
                 return@Column
             }
 
@@ -228,69 +251,61 @@ fun ChannelAnalysisScreen(
                 showChannelInfoDialog = false
             },
             title = {
-                Text("本机 Wi-Fi 能力")
+                Text(stringResource(R.string.dialog_channel_title)) // ✅ 本机 Wi-Fi 能力
             },
             text = {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 400.dp) // 2. 限制最高高度，防止弹窗占满全屏
+                        .heightIn(max = 400.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Text("当前 Wi-Fi 监管域")
+                    Text(stringResource(R.string.dialog_current_domain)) // ✅ 当前 Wi-Fi 监管域
 
                     Text(
-                        "国家码：无法通过普通公开 API 直接读取",
+                        stringResource(R.string.dialog_country_code_unknown), // ✅ 国家码：无法通过...
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
 
                     Spacer(Modifier.height(12.dp))
 
-                    Text("监管域允许使用的信道")
+                    Text(stringResource(R.string.dialog_allowed_channels)) // ✅ 监管域允许使用的信道
 
                     Spacer(Modifier.height(6.dp))
 
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-
                         Text(
-                            "当前 Android 版本低于 Android 14，" +
-                                    "无法通过公开 API 获取监管域允许的信道。",
+                            stringResource(R.string.dialog_android_too_old), // ✅ 当前 Android 版本低于...
                             color = Color.Red,
                             fontSize = 12.sp
                         )
-
                     } else if (supportedFrequencies.isEmpty()) {
-
                         Text(
-                            "未获取到允许使用的信道列表。" +
-                                    "请检查附近设备权限或设备系统是否支持该 API。",
+                            stringResource(R.string.dialog_no_channels), // ✅ 未获取到允许使用的信道列表...
                             color = Color.Red,
                             fontSize = 12.sp
                         )
-
                     } else {
-
                         Text(
-                            "共 ${supportedFrequencies.size} 个允许的信道",
+                            stringResource(R.string.dialog_channel_count, supportedFrequencies.size),
                             color = Color(0xFF4CAF50)
                         )
 
                         Spacer(Modifier.height(8.dp))
 
                         supportedFrequencies.forEach { freq ->
-
                             val channel = frequencyToChannel(freq)
 
                             val bandName = when (freq) {
-                                in 2400..2500 -> "2.4 GHz"
-                                in 4900..5900 -> "5 GHz"
-                                in 5925..7125 -> "6 GHz"
-                                else -> "其他频段"
+                                in 2400..2500 -> stringResource(R.string.band_2g)
+                                in 4900..5900 -> stringResource(R.string.band_5g)
+                                in 5925..7125 -> stringResource(R.string.band_6g)
+                                else -> stringResource(R.string.band_other)
                             }
 
                             Text(
-                                "$bandName  |  Channel $channel  |  $freq MHz",
+                                stringResource(R.string.dialog_channel_line, bandName, channel, freq),
                                 fontSize = 12.sp,
                                 color = Color.Gray
                             )
@@ -300,8 +315,7 @@ fun ChannelAnalysisScreen(
                     Spacer(Modifier.height(12.dp))
 
                     Text(
-                        "注：以上数据表示当前监管域允许 STA 模式使用的信道，" +
-                                "不代表设备硬件支持的全部信道。",
+                        stringResource(R.string.dialog_note),
                         fontSize = 11.sp,
                         color = Color.Gray
                     )
@@ -313,7 +327,7 @@ fun ChannelAnalysisScreen(
                         showChannelInfoDialog = false
                     }
                 ) {
-                    Text("知道了")
+                    Text(stringResource(R.string.btn_ok))
                 }
             }
         )

@@ -6,6 +6,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import top.pingwcy.wifianalyzer.model.BandFilter
+import androidx.compose.ui.res.stringResource
+import top.pingwcy.wifianalyzer.R
+
 // 筛选按钮组件
 @Composable
 fun FilterChipRow(
@@ -20,7 +23,7 @@ fun FilterChipRow(
             FilterChip(
                 selected = selected == filter,
                 onClick = { onSelect(filter) },
-                label = { Text(filter.label) }
+                label = { Text(stringResource(filter.labelRes)) }
             )
         }
     }

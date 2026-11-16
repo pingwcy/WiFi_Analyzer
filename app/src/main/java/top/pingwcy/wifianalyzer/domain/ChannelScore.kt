@@ -18,6 +18,7 @@ data class ApScore(
 data class ChannelScore(
     val channel: Int,
     // 三个维度的原始汇总
+    val grade: Grade,
     val apCount: Int,
     val avgRssi: Double,             // 平均信号（越强越负，干扰越大）
     val avgUtilizationPct: Double?,  // 有 BSS Load 的 AP 平均利用率
@@ -28,10 +29,14 @@ data class ChannelScore(
     // 最终
     val totalPenalty: Int,
     val score: Int,                  // 0~100
-    val grade: String,               // 优秀/良好/一般/拥挤
     val apScores: List<ApScore>,     // 每个 AP 明细（点进去看）
 )
+// 在 domain 包下新增一个枚举
+enum class Grade {
+    EXCELLENT, GOOD, FAIR, CROWDED
+}
 
+// 修改 ChannelScore
 object ChannelScorer {
 
     /**
@@ -55,7 +60,7 @@ object ChannelScorer {
                 bssLoadPenalty = 0,
                 totalPenalty = 0,
                 score = 100,
-                grade = "优秀",
+                grade = Grade.EXCELLENT,
                 apScores = emptyList()
             )
         }
@@ -97,10 +102,10 @@ object ChannelScorer {
         val score = (100 - totalPenalty).coerceIn(0, 100)
 
         val grade = when {
-            score >= 80 -> "优秀"
-            score >= 60 -> "良好"
-            score >= 40 -> "一般"
-            else -> "拥挤"
+            score >= 80 -> Grade.EXCELLENT
+            score >= 60 -> Grade.GOOD
+            score >= 40 -> Grade.FAIR
+            else -> Grade.CROWDED
         }
 
         return ChannelScore(

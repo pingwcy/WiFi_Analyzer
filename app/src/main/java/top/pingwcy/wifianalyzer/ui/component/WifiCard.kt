@@ -5,8 +5,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.domain.WifiStandards
 
@@ -18,8 +20,15 @@ fun WifiCard(wifi: WifiData, onClick: () -> Unit) {
         onClick = onClick
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // 处理 SSID 为空的情况（隐藏网络）
+            val displaySsid = if (wifi.ssid.isBlank()) {
+                stringResource(R.string.hidden_network)
+            } else {
+                wifi.ssid
+            }
+
             Text(
-                text = wifi.ssid,
+                text = displaySsid,
                 fontSize = 18.sp,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -28,9 +37,13 @@ fun WifiCard(wifi: WifiData, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "频率: ${wifi.frequency} MHz", color = Color.Gray)
+                // 带参数替换
                 Text(
-                    text = "信号: ${wifi.rssi} dBm",
+                    text = stringResource(R.string.wifi_card_frequency, wifi.frequency),
+                    color = Color.Gray
+                )
+                Text(
+                    text = stringResource(R.string.wifi_card_signal, wifi.rssi),
                     color = when {
                         wifi.rssi >= -50 -> Color(0xFF4CAF50)
                         wifi.rssi >= -70 -> Color(0xFFFF9800)
@@ -43,9 +56,23 @@ fun WifiCard(wifi: WifiData, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "频宽: ${WifiStandards.widthText(wifi.channelWidth)}", color = Color.Gray)
-                Text(text = "信道: ${wifi.primaryChannel}", color = Color.Gray)
-                Text(text = "国家: ${wifi.countryCode}", color = Color.Gray)
+                Text(
+                    text = stringResource(R.string.wifi_card_width, WifiStandards.widthText(wifi.channelWidth)),
+                    color = Color.Gray
+                )
+                Text(
+                    text = stringResource(R.string.wifi_card_channel, wifi.primaryChannel),
+                    color = Color.Gray
+                )
+
+                // 处理国家码为空的情况
+                val displayCountry = wifi.countryCode.ifBlank {
+                    stringResource(R.string.unknown)
+                }
+                Text(
+                    text = stringResource(R.string.wifi_card_country, displayCountry),
+                    color = Color.Gray
+                )
             }
         }
     }
