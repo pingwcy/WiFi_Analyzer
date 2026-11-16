@@ -13,5 +13,12 @@ data class WifiData(
         val wifiStandard: String,    // WiFi 4/5/6/7 等
         val capabilities: String,    // 加密/能力描述
         val isHidden: Boolean,
-        val countryCode: String  // AP 广播的 802.11d 国家码
+        val countryCode: String,  // AP 广播的 802.11d 国家码
+        val bssLoad: BssLoad? = null
+)
+
+data class BssLoad(
+        val stationCount: Int,
+        val channelUtilization: Int,
+        val availableAdmissionCapacity: Int
 )

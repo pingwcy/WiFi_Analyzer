@@ -99,6 +99,43 @@ fun WifiDetailScreen(wifi: WifiData, onBack: () -> Unit) {
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            DetailSection(title = "BSS Load（网络负载）") {
+
+                val bssLoad = wifi.bssLoad
+
+                if (bssLoad != null) {
+
+                    DetailRow(
+                        "关联站点数量",
+                        "${bssLoad.stationCount}"
+                    )
+
+                    DetailRow(
+                        "信道利用率",
+                        "${"%.2f".format(
+                            bssLoad.channelUtilization * 100.0 / 255.0
+                        )}% (${bssLoad.channelUtilization}/255)"
+                    )
+
+                    DetailRow(
+                        "剩余接纳容量",
+                        "${bssLoad.availableAdmissionCapacity} (32 μs/s)"
+                    )
+
+                } else {
+                    Text(
+                        text = "未获取到 BSS Load 信息",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+            }
+
+
         }
     }
 }
