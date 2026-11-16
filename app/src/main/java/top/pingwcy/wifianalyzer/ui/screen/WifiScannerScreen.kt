@@ -42,8 +42,7 @@ fun WifiScannerScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-    var bandFilter by remember { mutableStateOf(BandFilter.ALL) }
-
+    val bandFilter = uiState.bandFilter
     // 把菜单状态放到最上面
     var showMenu by remember { mutableStateOf(false) }
     var showChannelInfoDialog by remember { mutableStateOf(false) }
@@ -81,7 +80,7 @@ fun WifiScannerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("WiFi 扫描器") },
+                title = { Text("WiFi 分析器") },
                 actions = {
                     // 三个点菜单
                     IconButton(onClick = { showMenu = !showMenu }) {
@@ -141,7 +140,7 @@ fun WifiScannerScreen(
 
             FilterChipRow(
                 selected = bandFilter,
-                onSelect = { bandFilter = it }
+                onSelect = { viewModel.setBandFilter(it) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))

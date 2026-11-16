@@ -9,17 +9,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import top.pingwcy.wifianalyzer.data.WifiScanner
 import top.pingwcy.wifianalyzer.model.WifiData
-
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import top.pingwcy.wifianalyzer.model.BandFilter
 data class WifiUiState(
     val wifiList: List<WifiData> = emptyList(),
     val isScanning: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val bandFilter: BandFilter = BandFilter.ALL
 )
 
 class WifiViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(WifiUiState())
     val uiState: StateFlow<WifiUiState> = _uiState.asStateFlow()
-
+    // ViewModel 中
+    fun setBandFilter(filter: BandFilter) {
+        _uiState.value = _uiState.value.copy(bandFilter = filter)
+    }
     fun scan(context: Context) {
         if (_uiState.value.isScanning) return
 

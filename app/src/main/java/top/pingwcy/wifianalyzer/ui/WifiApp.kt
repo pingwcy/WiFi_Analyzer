@@ -6,31 +6,72 @@ import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.ui.screen.ChannelAnalysisScreen
 import top.pingwcy.wifianalyzer.ui.screen.WifiDetailScreen
 import top.pingwcy.wifianalyzer.ui.screen.WifiScannerScreen
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavHostController
 
-enum class Screen { LIST, DETAIL, CHANNEL }
+object Routes {
+    const val LIST = "list"
+    const val DETAIL = "detail/{wifiId}"   // 详情页带参数
+    const val CHANNEL = "channel"
 
+    fun detail(wifiId: String) = "detail/$wifiId"
+}
 @Composable
-fun WifiScannerApp() {
-    var selectedWifi by remember { mutableStateOf<WifiData?>(null) }
-    var currentScreen by remember { mutableStateOf(Screen.LIST) }
-
-    // 统一获取 ViewModel，让数据在页面间共享
+fun WifiScannerApp(
+    navController: NavHostController = rememberNavController()
+) {
     val viewModel: WifiViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
 
-    when (currentScreen) {
-        Screen.LIST -> WifiScannerScreen(
-            onItemClick = { selectedWifi = it; currentScreen = Screen.DETAIL },
-            onOpenChannelAnalysis = { currentScreen = Screen.CHANNEL },
-            viewModel = viewModel // 把 ViewModel 传给列表页
-        )
-        Screen.DETAIL -> WifiDetailScreen(
-            wifi = selectedWifi!!,
-            onBack = { selectedWifi = null; currentScreen = Screen.LIST }
-        )
-        Screen.CHANNEL -> ChannelAnalysisScreen(
-            wifiList = uiState.wifiList, // 从 ViewModel 拿到最新的列表给信道分析
-            onBack = { currentScreen = Screen.LIST }
-        )
+    NavHost(
+        navController = navController,
+        startDestination = Routes.LIST
+    ) {
+        // ---------- 列表页 ----------
+        composable(Routes.LIST) {
+            WifiScannerScreen(
+                onItemClick = { wifi ->
+                    // 用唯一标识跳转（BSSID 或你模型里的 id）
+                    navController.navigate(Routes.detail(wifi.bssid))
+                },
+                onOpenChannelAnalysis = {
+                    navController.navigate(Routes.CHANNEL)
+                },
+                viewModel = viewModel
+            )
+        }
+
+        // ---------- 详情页（带参数） ----------
+        composable(
+            route = Routes.DETAIL,
+            arguments = listOf(navArgument("wifiId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val wifiId = backStackEntry.arguments?.getString("wifiId").orEmpty()
+
+            // 从共享 ViewModel 的最新列表里按 id 查
+            val wifi = uiState.wifiList.firstOrNull { it.bssid == wifiId }
+
+            if (wifi != null) {
+                WifiDetailScreen(
+                    wifi = wifi,
+                    onBack = { navController.popBackStack() }
+                )
+            } else {
+                // 列表刷新后找不到该 WiFi，安全兜底，避免 NPE
+                LaunchedEffect(Unit) { navController.popBackStack() }
+            }
+        }
+
+        // ---------- 信道分析页 ----------
+        composable(Routes.CHANNEL) {
+            ChannelAnalysisScreen(
+                wifiList = uiState.wifiList,
+                onBack = { navController.popBackStack() }
+            )
+        }
     }
 }
