@@ -2,8 +2,8 @@ package top.pingwcy.wifianalyzer.domain
 
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.model.ChannelUsage
-// 按频段统计。useOccupied = true 时按 occupiedChannels 展开，否则只算主信道
-// 按频段统计。showEmpty = true 时把该频段所有标准信道都列出来（没有 AP 的 count=0）
+import top.pingwcy.wifianalyzer.domain.ChannelScorer
+
 
 object ChannelAnalyzer {
 
@@ -18,13 +18,13 @@ object ChannelAnalyzer {
         val filtered = (if (band == null) list else list.filter { it.band == band })
             .filter { !ignoreWeak || it.rssi >= weakThreshold }
 
-        val map = mutableMapOf<Int, MutableList<String>>()
+        val map = mutableMapOf<Int, MutableList<WifiData>>()
         filtered.forEach { wifi ->
             val channels = if (useOccupied)
                 ChannelCalculator.occupiedChannels(wifi)
             else listOf(wifi.primaryChannel)
             channels.filter { it > 0 }.distinct().forEach { ch ->
-                map.getOrPut(ch) { mutableListOf() }.add(wifi.ssid)
+                map.getOrPut(ch) { mutableListOf() }.add(wifi)
             }
         }
 
@@ -36,7 +36,14 @@ object ChannelAnalyzer {
         }
 
         return map.entries.sortedBy { it.key }
-            .map { ChannelUsage(it.key, it.value.size, it.value) }
+            .map { (ch, list) ->
+                ChannelUsage(
+                    channel = ch,
+                    count = list.size,
+                    networks = list.map { it.ssid },
+                    score = ChannelScorer.scoreChannel(ch, list)
+                )
+            }
     }
 
     fun allChannelsOfBand(band: String): List<Int> = when (band) {

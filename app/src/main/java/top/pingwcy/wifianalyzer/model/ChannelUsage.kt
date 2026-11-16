@@ -1,7 +1,10 @@
 package top.pingwcy.wifianalyzer.model
 
+import top.pingwcy.wifianalyzer.domain.ChannelScore
+
 data class ChannelUsage(
     val channel: Int,
-    val count: Int,          // 该信道被占用次数
-    val networks: List<String>  // 占用该信道的 SSID，用于详情
+    val count: Int,
+    val networks: List<String>,
+    val score: ChannelScore
 )

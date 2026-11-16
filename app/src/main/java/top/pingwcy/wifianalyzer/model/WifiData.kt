@@ -22,3 +22,12 @@ data class BssLoad(
         val channelUtilization: Int,
         val availableAdmissionCapacity: Int
 )
+
+/**
+ * 分组 key：
+ * - 隐藏网络按 BSSID 单独成组（避免所有空 SSID 混在一起）
+ * - 可见网络按 SSID + 加密能力分组（同名但加密类型不同的不合并）
+ */
+fun groupKey(w: WifiData): String =
+        if (w.isHidden || w.ssid.isBlank()) "hidden:${w.bssid}"
+        else "${w.ssid}|${w.capabilities}"

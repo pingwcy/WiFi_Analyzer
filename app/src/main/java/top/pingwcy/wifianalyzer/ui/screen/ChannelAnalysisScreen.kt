@@ -24,7 +24,8 @@ import top.pingwcy.wifianalyzer.ui.component.ChannelBarRow
 import android.util.Log
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-
+import top.pingwcy.wifianalyzer.model.ChannelUsage
+import  top.pingwcy.wifianalyzer.ui.component.ChannelScoreDialog
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChannelAnalysisScreen(
@@ -37,7 +38,7 @@ fun ChannelAnalysisScreen(
     var showEmpty by remember { mutableStateOf(false) }
     var ignoreWeak by remember { mutableStateOf(false) }
     var weakThreshold by remember { mutableStateOf(-82) }
-
+    var selectedChannel by remember { mutableStateOf<ChannelUsage?>(null) }
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
     var showChannelInfoDialog by remember { mutableStateOf(false) }
@@ -88,6 +89,7 @@ fun ChannelAnalysisScreen(
                 )
             )
         }
+
     ) { padding ->
         // ... 下面的 Column 和里面的所有内容，保持你原来的代码不变 ...
         Column(
@@ -168,12 +170,19 @@ fun ChannelAnalysisScreen(
                     ChannelBarRow(
                         item = item,
                         maxCount = maxCount,
-                        onClick = { }
+                        onClick = {selectedChannel = item }
                     )
                 }
+
             }
+
         }
+
     }
+    selectedChannel?.let { item ->
+        ChannelScoreDialog(item = item, onDismiss = { selectedChannel = null })
+    }
+
     // 弹窗：显示本机信道信息
 
     if (showChannelInfoDialog) {
