@@ -14,18 +14,29 @@ data class WifiData(
         val capabilities: String,    // 加密/能力描述
         val isHidden: Boolean,
         val countryCode: String,  // AP 广播的 802.11d 国家码
-        val bssLoad: BssLoad? = null
+        val bssLoad: BssLoad? = null,
+        val beaconInfo: BeaconInfo? = null
 )
 // 适用于国家码
 enum class CountryCodeState {
         NOT_SUPPORTED, NOT_BROADCAST, INCOMPLETE, INVALID, READ_FAILED, VALID
 }
+data class MultipleBssidInfo(
+        val maxBssidIndicator: Int,
+        val profileCount: Int,
+        val profiles: List<ByteArray>
+)
+
+data class NeighborApInfo(
+        val tbttInformationField: Int,
+        val body: ByteArray
+)
+
 data class BssLoad(
         val stationCount: Int,
         val channelUtilization: Int,
         val availableAdmissionCapacity: Int
 )
-
 /**
  * 分组 key：
  * - 隐藏网络按 BSSID 单独成组（避免所有空 SSID 混在一起）

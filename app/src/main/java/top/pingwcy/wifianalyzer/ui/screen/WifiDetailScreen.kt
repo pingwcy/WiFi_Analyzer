@@ -30,7 +30,7 @@ import top.pingwcy.wifianalyzer.domain.ChannelCalculator
 import top.pingwcy.wifianalyzer.domain.WifiStandards
 import top.pingwcy.wifianalyzer.model.WifiData
 import kotlin.text.ifEmpty
-
+import top.pingwcy.wifianalyzer.ui.component.BeaconInfoSections
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WifiDetailScreen(wifi: WifiData, onBack: () -> Unit) {
@@ -156,6 +156,11 @@ fun WifiDetailScreen(wifi: WifiData, onBack: () -> Unit) {
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            BeaconInfoSections(
+                beacon = wifi.beaconInfo
+            )
         }
     }
 }

@@ -60,7 +60,13 @@ fun ScanResult.toWifiData(): WifiData {
     val chWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) this.channelWidth else 0
     val cf0 = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) this.centerFreq0 else 0
     val cf1 = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) this.centerFreq1 else 0
-
+    val beacon = if (
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+    ) {
+        BeaconIeParser.parse(this.informationElements)
+    } else {
+        null
+    }
     return WifiData(
         ssid = this.SSID,
         bssid = this.BSSID ?: "",
@@ -77,7 +83,8 @@ fun ScanResult.toWifiData(): WifiData {
         capabilities = this.capabilities ?: "",
         isHidden = this.SSID.isEmpty(),
         countryCode = this.getCountryCode(),
-        bssLoad = this.getBssLoad()
+        bssLoad = this.getBssLoad(),
+        beaconInfo = beacon
     )
 }
 

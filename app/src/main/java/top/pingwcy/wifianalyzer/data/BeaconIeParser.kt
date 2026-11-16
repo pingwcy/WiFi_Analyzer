@@ -1,0 +1,657 @@
+
+package top.pingwcy.wifianalyzer.data
+
+import android.net.wifi.ScanResult
+import top.pingwcy.wifianalyzer.model.*
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+
+object BeaconIeParser {
+
+    private const val ID_SUPPORTED_RATES = 1
+    private const val ID_COUNTRY = 7
+    private const val ID_BSS_LOAD = 11
+    private const val ID_HT_CAP = 45
+    private const val ID_RSN = 48
+    private const val ID_EXT_RATES = 50
+    private const val ID_MOBILITY_DOMAIN = 54
+    private const val ID_HT_OPERATION = 61
+    private const val ID_MULTIPLE_BSSID = 71
+    private const val ID_EXT_CAP = 127
+    private const val ID_RSNXE = 244
+    private const val ID_RNR = 201
+    private const val ID_VHT_CAP = 191
+    private const val ID_VHT_OPERATION = 192
+    private const val ID_TX_POWER = 195
+    private const val ID_VENDOR = 221
+    private const val ID_EXTENSION = 255
+
+    // Extension IDs
+    private const val EXT_HE_CAP = 35
+    private const val EXT_HE_OPERATION = 36
+    private const val EXT_HE_MU_EDCA = 38
+    private const val EXT_SPATIAL_REUSE = 39
+    private const val EXT_HE_6GHZ = 59
+    private const val EXT_EHT_CAP = 108
+    private const val EXT_EHT_OPERATION = 109
+
+    // RSN AKM suite 类型
+    private const val AKM_PSK = 2
+    private const val AKM_PSK_SHA256 = 6
+    private const val AKM_SAE = 8
+    private const val AKM_OWE = 18
+    private const val AKM_8021X = 1
+    private const val AKM_8021X_SHA256 = 5
+    private const val AKM_FT_PSK = 4
+    private const val AKM_FT_8021X = 3
+
+    // RSN cipher suite 类型
+    private const val CIPHER_CCMP = 4
+    private const val CIPHER_TKIP = 2
+    private const val CIPHER_GCMP = 8
+    private const val CIPHER_GCMP_256 = 9
+    private const val CIPHER_CCMP_256 = 10
+
+    var rsn: RsnInfo? = null
+    var wmm: WmmInfo? = null
+    var multipleBssidInfo: MultipleBssidInfo? = null
+    var rnrList: List<NeighborApInfo> = emptyList()
+
+    private fun readU16BE(data: ByteArray, offset: Int): Int? {
+        if (offset < 0 || offset + 1 >= data.size) return null
+        return ((data[offset].toInt() and 0xFF) shl 8) or
+                (data[offset + 1].toInt() and 0xFF)
+    }
+
+    private fun readU32BE(data: ByteArray, offset: Int): Long? {
+        if (offset < 0 || offset + 3 >= data.size) return null
+        return ((data[offset].toLong() and 0xFF) shl 24) or
+                ((data[offset + 1].toLong() and 0xFF) shl 16) or
+                ((data[offset + 2].toLong() and 0xFF) shl 8) or
+                (data[offset + 3].toLong() and 0xFF)
+    }
+    private fun parseMultipleBssid(data: ByteArray): MultipleBssidInfo {
+        if (data.isEmpty()) return MultipleBssidInfo(0, 0, emptyList())
+        val maxBssidIndicator = data[0].toInt() and 0xFF
+        // 后续是 1..N-1 个 BSSID Profile（每个 profile 由 element 序列组成）
+        val profiles = mutableListOf<ByteArray>()
+        var off = 1
+        while (off < data.size) {
+            val subId = data[off].toInt() and 0xFF
+            if (off + 1 >= data.size) break
+            val subLen = data[off + 1].toInt() and 0xFF
+            if (off + 2 + subLen > data.size) break
+            profiles += data.copyOfRange(off, off + 2 + subLen)
+            off += 2 + subLen
+        }
+        return MultipleBssidInfo(maxBssidIndicator, profiles.size, profiles)
+    }
+
+    private fun parseRnr(data: ByteArray): List<NeighborApInfo> {
+        // RNR 由一或多个 Neighbor AP Info 组成，每个字段是 TLV，长度可变
+        // 完整解析较长，建议至少提取：TBTT Offset、BSSID、Short SSID、BSS Params、20/40/80/160/320MHz Channel
+        val list = mutableListOf<NeighborApInfo>()
+        var off = 0
+        while (off < data.size) {
+            val tbtt = data[off].toInt() and 0xFF
+            val len = data[off + 1].toInt() and 0xFF
+            if (off + 2 + len > data.size) break
+            val body = data.copyOfRange(off + 2, off + 2 + len)
+            list += NeighborApInfo(tbttInformationField = tbtt, body = body)
+            off += 2 + len
+        }
+        return list
+    }
+    private fun parseCountry(data: ByteArray): CountryInfo? {
+        if (data.size < 3) return null
+        val code = String(data.copyOfRange(0, 2), Charsets.US_ASCII)
+        if (!code.matches(Regex("[A-Z]{2}"))) return null
+        val envByte = data[2].toInt() and 0xFF
+        val env = when (envByte) {
+            'I'.code, 'O'.code, ' '.code -> envByte.toChar()
+            else -> null
+        }
+
+        val triplets = mutableListOf<CountryTriplet>()
+        val psd = mutableListOf<ByteArray>()
+        var off = 3
+        while (off + 2 < data.size) {
+            val first = data[off].toInt() and 0xFF
+            // Power Constraint 子元素 (201) 走单独分支
+            if (first == 201) {
+                psd += data.copyOfRange(off, minOf(off + 3, data.size))
+                off += 3
+                continue
+            }
+            val count = data[off + 1].toInt() and 0xFF
+            val power = data[off + 2].toInt() and 0xFF
+            // 0xFF 表示最大功率未知
+            triplets += CountryTriplet(
+                firstChannel = first,
+                channelCount = count,
+                maxPowerDbm = if (power == 0xFF) null else power
+            )
+            off += 3
+        }
+        return CountryInfo(code, env, triplets)
+    }
+    private fun parseRsn(data: ByteArray, warnings: MutableList<String>): RsnInfo? {
+        if (data.size < 2) return null
+        var off = 0
+
+        val version = readU16LE(data, off) ?: return null
+        off += 2
+
+        // Group cipher
+        if (off + 4 > data.size) return null
+        val groupCipher = ouiToString(data, off)
+        off += 4
+
+        // Pairwise
+        val pairwiseCount = readU16LE(data, off) ?: return null
+        off += 2
+        val pairwise = mutableListOf<String>()
+        repeat(pairwiseCount) {
+            if (off + 4 > data.size) return null
+            pairwise += ouiToString(data, off); off += 4
+        }
+
+        // AKM
+        val akmCount = readU16LE(data, off) ?: return null
+        off += 2
+        val akms = mutableListOf<Int>()
+        repeat(akmCount) {
+            if (off + 4 > data.size) return null
+            // OUI(3) + type(1)
+            val type = data[off + 3].toInt() and 0xFF
+            akms += type
+            off += 4
+        }
+
+        // RSN capabilities
+        var rsnCaps = 0
+        if (off + 2 <= data.size) {
+            rsnCaps = readU16LE(data, off) ?: 0
+            off += 2
+        }
+
+        // PMKID
+        val pmkidList = mutableListOf<ByteArray>()
+        if (off + 2 <= data.size) {
+            val pmkidCount = readU16LE(data, off) ?: 0
+            off += 2
+            repeat(pmkidCount) {
+                if (off + 16 > data.size) return@repeat
+                pmkidList += data.copyOfRange(off, off + 16); off += 16
+            }
+        }
+
+        // Group management cipher (optional)
+        val groupMgmtCipher = if (off + 4 <= data.size) {
+            ouiToString(data, off).also { off += 4 }
+        } else null
+
+        // RSN caps 解析
+        val preAuth = (rsnCaps and 0x0001) != 0
+        val noPairwise = (rsnCaps and 0x0002) != 0
+        val ptksaReplayCounter = ((rsnCaps shr 2) and 0x3)
+        val mfpRequired = (rsnCaps and 0x0040) != 0
+        val mfpCapable = (rsnCaps and 0x0080) != 0
+        val gtkNotUsed = (rsnCaps and 0x0400) != 0
+        val sppAmsdu = (rsnCaps and 0x0800) != 0
+        val peerKeyEnabled = (rsnCaps and 0x0200) != 0
+        val ocv = (rsnCaps and 0x4000) != 0
+
+        return RsnInfo(
+            version = version,
+            groupCipher = groupCipher,
+            pairwiseCiphers = pairwise,
+            akmSuites = akms,
+            preAuthentication = preAuth,
+            noPairwise = noPairwise,
+            ptksaReplayCounter = ptksaReplayCounter,
+            mfpRequired = mfpRequired,
+            mfpCapable = mfpCapable,
+            gtkNotUsed = gtkNotUsed,
+            sppAmsdu = sppAmsdu,
+            peerKeyEnabled = peerKeyEnabled,
+            ocv = ocv,
+            pmkids = pmkidList,
+            groupMgmtCipher = groupMgmtCipher
+        )
+    }
+
+    // 注意：RSN/WMM/HT/VHT 的位域是 little-endian 的比特序，读 U16/U32 时用 LE
+    private fun ouiToString(b: ByteArray, off: Int): String =
+        "%02X:%02X:%02X".format(
+            b[off].toInt() and 0xFF,
+            b[off + 1].toInt() and 0xFF,
+            b[off + 2].toInt() and 0xFF
+        )
+    fun parse(
+        elements: List<ScanResult.InformationElement>
+    ): BeaconInfo {
+
+        val raw = mutableListOf<RawInformationElement>()
+        val warnings = mutableListOf<String>()
+        val rates = mutableListOf<WifiRate>()
+        val vendors = mutableListOf<VendorIe>()
+
+        val rnr = mutableListOf<ByteArray>()
+        val multipleBssid = mutableListOf<ByteArray>()
+
+        var country: CountryInfo? = null
+        var bssLoad: BssLoad? = null
+        var rsn: RsnInfo? = null
+        var rsnxe: ByteArray? = null
+
+        var ht: HtInfo? = null
+        var vht: VhtInfo? = null
+        var he: HeInfo? = null
+        var eht: EhtInfo? = null
+        var wmm: WmmInfo? = null
+
+        var extCaps: ByteArray? = null
+        var powerEnvelope: ByteArray? = null
+        var mobilityDomain: ByteArray? = null
+
+        for (element in elements) {
+
+            val id = element.id
+            val idExt = if (id == ID_EXTENSION) {
+                element.idExt
+            } else {
+                -1
+            }
+
+            val buffer = element.bytes.duplicate()
+            val data = ByteArray(buffer.remaining())
+            buffer.get(data)
+
+            // 无论是否认识，都先保存
+            raw += RawInformationElement(
+                id = id,
+                idExt = idExt.takeIf { it >= 0 },
+                data = data.copyOf()
+            )
+
+            try {
+                when (id) {
+
+                    ID_SUPPORTED_RATES,
+                    ID_EXT_RATES -> {
+                        rates += parseRates(data)
+                    }
+
+                    ID_COUNTRY -> {
+                        country = parseCountry(data)
+                    }
+
+                    ID_BSS_LOAD -> {
+                        bssLoad = parseBssLoad(data)
+                    }
+
+                    ID_RSN -> {
+                        rsn = parseRsn(data, warnings)
+                    }
+
+                    ID_RSNXE -> {
+                        rsnxe = data.copyOf()
+                    }
+
+                    ID_HT_CAP -> {
+                        if (data.size >= 26) {
+                            val caps = readU16LE(data, 0) ?: 0
+                            val ampdu = data[2].toInt() and 0xFF
+                            val mcs = data.copyOfRange(3, 19)
+                            // HT Extended Capabilities (2B) @19, TxBF (4B) @21, ASEL (3B) @25
+                            val htExt = readU16LE(data, 19)
+                            val txBf = readU32LE(data, 21)
+                            val asel = if (data.size >= 28) readU16LE(data, 25) else null
+
+                            val maxAmsdu = when ((caps shr 0) and 0x3) {
+                                0 -> 3839
+                                1 -> 7935
+                                else -> null
+                            }
+                            val maxAmpdu = when ((caps shr 1) and 0x3) {
+                                0 -> 8191
+                                1 -> 16383
+                                2 -> 32767
+                                3 -> 65535
+                                else -> null
+                            }
+                            val sgi20 = (caps and 0x0020) != 0
+                            val sgi40 = (caps and 0x0040) != 0
+                            val htGreenfield = (caps and 0x0010) != 0
+                            val ldpc = (caps and 0x0002) != 0
+                            val fortyMhz = (caps and 0x0400) != 0
+                            val dsssCck40 = (caps and 0x0800) != 0
+                            val psmp = (caps and 0x1000) != 0
+                            val stbc = ((caps shr 5) and 0x3)
+
+                            ht = HtInfo(
+                                capabilities = caps,
+                                maxAmsduLength = maxAmsdu,
+                                ampduParameters = ampdu,
+                                rxMcsSet = mcs,
+                                operation = ht?.operation,
+                                htExtendedCapabilities = htExt,
+                                txBeamformingCapabilities = txBf?.toLong(),
+                                aselCapability = asel,
+                                sgi20 = sgi20, sgi40 = sgi40,
+                                greenfield = htGreenfield, ldpc = ldpc,
+                                fortyMhzSupported = fortyMhz,
+                                maxAmpduLength = maxAmpdu,
+                                stbcRxStreams = stbc
+                            )
+                        } else {
+                            ht = HtInfo(
+                                capabilities = readU16LE(data, 0) ?: 0,
+                                maxAmsduLength = null,
+                                ampduParameters = data.getOrNull(2)?.toInt()?.and(0xFF),
+                                rxMcsSet = data.copyOfRangeSafe(3, 19),
+                                operation = ht?.operation
+                            )
+                        }
+                    }
+                    ID_HT_OPERATION -> {
+                        if (data.size >= 22) {
+                            ht = (ht ?: emptyHt()).copy(
+                                operation = data.copyOf(),
+                                primaryChannel = data[0].toInt() and 0xFF,
+                                secondaryChannelOffset = (data[1].toInt() shr 0) and 0x3,
+                                channelWidth = if (((data[1].toInt() shr 2) and 0x3) == 1) 40 else 20,
+                                rifsMode = (data[1].toInt() and 0x10) != 0
+                            )
+                        } else {
+                            ht = (ht ?: emptyHt()).copy(operation = data.copyOf())
+                        }
+                    }
+                    ID_VHT_CAP -> {
+                        if (data.size >= 12) {
+                            val cap = readU32LE(data, 0)?.toLong() ?: 0L
+                            val rxMcs = readU16LE(data, 4)
+                            val txMcs = readU16LE(data, 8)
+                            val maxMpdu = when ((cap shr 0) and 0x3) {
+                                0L -> 7991; 1L -> 11454; 2L -> 11454; else -> null
+                            }
+                            val chanWidth = (cap shr 2) and 0x3 // 0:1,1:1,2:1
+                            val rxLdpc = (cap and 0x10L) != 0L
+                            val sgi80 = (cap and 0x20L) != 0L
+                            val sgi160 = (cap and 0x40L) != 0L
+                            val txStbc = (cap and 0x80L) != 0L
+                            val rxStbc = ((cap shr 8) and 0x7).toInt()
+                            val suBeamformer = (cap and 0x0800L) != 0L
+                            val muBeamformer = (cap and 0x10000L) != 0L
+                            vht = VhtInfo(
+                                capabilities = cap,
+                                rxMcsMap = rxMcs,
+                                txMcsMap = txMcs,
+                                operation = vht?.operation,
+                                maxMpduLength = maxMpdu,
+                                supportedChannelWidth = chanWidth.toInt(),
+                                rxLdpc = rxLdpc, sgi80 = sgi80, sgi160 = sgi160,
+                                txStbc = txStbc, rxStbc = rxStbc,
+                                suBeamformer = suBeamformer,
+                                muBeamformer = muBeamformer
+                            )
+                        }
+                    }
+                    ID_VHT_OPERATION -> {
+                        if (data.size >= 5) {
+                            val width = data[0].toInt() and 0xFF
+                            vht = (vht ?: emptyVht()).copy(
+                                operation = data.copyOf(),
+                                channelWidth = width,
+                                centerFreqSeg0 = data[1].toInt() and 0xFF,
+                                centerFreqSeg1 = data[2].toInt() and 0xFF,
+                                basicMcs = readU16LE(data, 3)
+                            )
+                        }
+                    }
+                    ID_EXT_CAP -> {
+                        extCaps = data.copyOf()
+                    }
+
+                    ID_TX_POWER -> {
+                        powerEnvelope = data.copyOf()
+                    }
+
+                    ID_MOBILITY_DOMAIN -> {
+                        mobilityDomain = data.copyOf()
+                    }
+
+                    ID_MULTIPLE_BSSID -> {
+                        multipleBssid += data.copyOf()
+                    }
+
+                    ID_RNR -> {
+                        rnr += data.copyOf()
+                    }
+
+                    ID_VENDOR -> {
+                        val v = parseVendor(data)
+                        if (v != null) {
+                            vendors += v
+                            if (v.oui == "00:50:F2" && v.vendorType == 2 && data.size >= 6) {
+                                val subtype = data[4].toInt() and 0xFF
+                                val version = data[5].toInt() and 0xFF
+                                val isParameterized = subtype == 1
+                                if (isParameterized && data.size >= 8) {
+                                    val qos = readU16LE(data, 6) ?: 0
+                                    wmm = WmmInfo(
+                                        version = version,
+                                        qosInfo = qos,
+                                        uApsd = (qos and 0x80) != 0,
+                                        parameterized = true,
+                                        acm = null // 参数化 IE 里各 AC 参数在 AC 参数 IE 中
+                                    )
+                                } else {
+                                    wmm = WmmInfo(
+                                        version = version,
+                                        qosInfo = readU16LE(data, 6) ?: 0,
+                                        uApsd = false,
+                                        parameterized = false,
+                                        acm = null
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    ID_EXTENSION -> {
+                        when (idExt) {
+
+                            EXT_HE_CAP -> {
+                                if (data.size >= 6 + 11 + 4) {
+                                    val mac = data.copyOfRange(0, 6)
+                                    val phy = data.copyOfRange(6, 17)
+                                    val mcs = data.copyOfRange(17, 21)
+                                    he = (he ?: emptyHe()).copy(
+                                        macCapabilities = mac,
+                                        phyCapabilities = phy,
+                                        rxMcsNss = mcs,
+                                        operation = he?.operation,
+                                        heSupported = true,
+                                        // MAC caps 关键位
+                                        twtRequester = (mac[0].toInt() and 0x01) != 0,
+                                        twtResponder = (mac[0].toInt() and 0x02) != 0,
+                                        muEdca = (mac[2].toInt() and 0x80) != 0,
+                                        omControl = (mac[3].toInt() and 0x40) != 0,
+                                        // PHY caps 关键位
+                                        suBeamformer = (phy[0].toInt() and 0x01) != 0,
+                                        suBeamformee = (phy[0].toInt() and 0x02) != 0,
+                                        muBeamformer = (phy[0].toInt() and 0x04) != 0,
+                                        channelWidth160 = (phy[1].toInt() and 0x80) != 0
+                                    )
+                                }
+                            }
+                            EXT_HE_OPERATION -> {
+                                he = (he ?: emptyHe()).copy(
+                                    operation = data.copyOf()
+                                )
+                            }
+
+                            EXT_HE_MU_EDCA,
+                            EXT_SPATIAL_REUSE,
+                            EXT_HE_6GHZ -> {
+                                // 保留在 raw 中
+                            }
+
+                            EXT_EHT_CAP -> {
+                                if (data.size >= 11) {
+                                    val mac = data.copyOfRange(0, 2)
+                                    val phy = data.copyOfRange(2, 11)
+                                    val macU16 = readU16LE(mac, 0) ?: 0
+                                    eht = (eht ?: emptyEht()).copy(
+                                        macCapabilities = mac,
+                                        phyCapabilities = phy,
+                                        operation = eht?.operation,
+                                        epcsPriorityAccess = (macU16 and 0x0001) != 0,
+                                        ehtOmControl = (macU16 and 0x0002) != 0,
+                                        triggeredTxopSharing = (macU16 and 0x0004) != 0,
+                                        // PHY 示例
+                                        support320Mhz = (phy[0].toInt() and 0x01) != 0,
+                                        support4096Qam = (phy[5].toInt() and 0x01) != 0
+                                    )
+                                }
+                            }
+                            EXT_EHT_OPERATION -> {
+                                if (data.size >= 5) {
+                                    val params = data[0].toInt() and 0xFF
+                                    val widthCode = (params shr 1) and 0x7
+                                    eht = (eht ?: emptyEht()).copy(
+                                        operation = data.copyOf(),
+                                        channelWidth = when (widthCode) {
+                                            0 -> 20; 1 -> 40; 2 -> 80; 3 -> 160; 4 -> 320; else -> null
+                                        },
+                                        puncturingBitmap = readU16LE(data, 1)
+                                    )
+                                }
+                            }                        }
+                    }
+                }
+
+            } catch (e: Exception) {
+                warnings += "IE=$id EXT=$idExt: ${e.message}"
+            }
+        }
+
+        return BeaconInfo(
+            rawIes = raw,
+            country = country,
+            bssLoad = bssLoad,
+            supportedRates = rates,
+            rsn = rsn,
+            rsnxe = rsnxe,
+            ht = ht,
+            vht = vht,
+            he = he,
+            eht = eht,
+            wmm = wmm,
+            extendedCapabilities = extCaps,
+            powerEnvelope = powerEnvelope,
+            mobilityDomain = mobilityDomain,
+            vendorIes = vendors,
+            rnr = rnr,
+            multipleBssid = multipleBssid,
+            parseWarnings = warnings,
+        )
+    }
+
+    private fun parseRates(data: ByteArray): List<WifiRate> {
+        return data.map {
+            val value = it.toInt() and 0xFF
+
+            WifiRate(
+                mbps = (value and 0x7F) * 0.5,
+                basic = (value and 0x80) != 0
+            )
+        }
+    }
+
+    private fun parseBssLoad(data: ByteArray): BssLoad? {
+        if (data.size < 5) return null
+
+        return BssLoad(
+            stationCount = readU16LE(data, 0) ?: return null,
+            channelUtilization = data[2].toInt() and 0xFF,
+            availableAdmissionCapacity =
+                readU16LE(data, 3) ?: return null
+        )
+    }
+
+
+    private fun parseVendor(data: ByteArray): VendorIe? {
+        if (data.size < 3) return null
+
+        val oui = data.take(3).joinToString(":") {
+            "%02X".format(it.toInt() and 0xFF)
+        }
+
+        return VendorIe(
+            oui = oui,
+            vendorType = data.getOrNull(3)
+                ?.toInt()?.and(0xFF),
+            data = data.copyOf()
+        )
+    }
+
+    private fun readU16LE(
+        data: ByteArray,
+        offset: Int
+    ): Int? {
+        if (offset < 0 || offset + 1 >= data.size) return null
+
+        return (data[offset].toInt() and 0xFF) or
+                ((data[offset + 1].toInt() and 0xFF) shl 8)
+    }
+
+    private fun readU32LE(
+        data: ByteArray,
+        offset: Int
+    ): Int? {
+        if (offset < 0 || offset + 3 >= data.size) return null
+
+        return (data[offset].toInt() and 0xFF) or
+                ((data[offset + 1].toInt() and 0xFF) shl 8) or
+                ((data[offset + 2].toInt() and 0xFF) shl 16) or
+                ((data[offset + 3].toInt() and 0xFF) shl 24)
+    }
+
+    private fun ByteArray.copyOfRangeSafe(
+        from: Int,
+        to: Int
+    ): ByteArray? {
+        if (from < 0 || to > size || from > to) return null
+        return copyOfRange(from, to)
+    }
+
+
+    private fun emptyHe() = HeInfo(
+        macCapabilities = null,
+        phyCapabilities = null,
+        rxMcsNss = null,
+        operation = null
+    )
+    private fun emptyVht() = VhtInfo(
+        capabilities = 0L,
+        rxMcsMap = null,
+        txMcsMap = null,
+        operation = null
+    )
+    private fun emptyEht() = EhtInfo(
+        macCapabilities = null,
+        phyCapabilities = null,
+        operation = null
+    )
+    private fun emptyHt() = HtInfo(
+        capabilities = 0,
+        maxAmsduLength = null,
+        ampduParameters = null,
+        rxMcsSet = null,
+        operation = null
+    )
+
+}
+
