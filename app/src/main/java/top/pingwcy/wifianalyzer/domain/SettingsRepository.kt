@@ -15,9 +15,15 @@ interface SettingsRepository {
     /** 应用内语言选择（默认跟随系统）。 */
     val appLanguage: Flow<AppLanguage>
 
+    /** 是否开启前台持续扫描（默认关闭）。 */
+    val continuousScanEnabled: Flow<Boolean>
+
     /** 更新自动扫描开关。 */
     suspend fun setAutoScanEnabled(enabled: Boolean)
 
     /** 更新应用内语言。 */
     suspend fun setAppLanguage(language: AppLanguage)
+
+    /** 更新持续扫描开关。 */
+    suspend fun setContinuousScanEnabled(enabled: Boolean)
 }

@@ -19,6 +19,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,12 +28,18 @@ import top.pingwcy.wifianalyzer.ui.component.DetailRow
 import top.pingwcy.wifianalyzer.ui.component.DetailSection
 import top.pingwcy.wifianalyzer.domain.ChannelCalculator
 import top.pingwcy.wifianalyzer.domain.WifiStandards
+import top.pingwcy.wifianalyzer.model.RssiSample
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.ui.component.BeaconInfoSections
+import top.pingwcy.wifianalyzer.ui.component.RssiTrendChart
 import top.pingwcy.wifianalyzer.ui.theme.signalColor
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WifiDetailScreen(wifi: WifiData, onBack: () -> Unit) {
+fun WifiDetailScreen(
+    wifi: WifiData,
+    rssiHistory: List<RssiSample>,
+    onBack: () -> Unit,
+) {
     // 处理 SSID 为空的情况
     val displaySsid = if (wifi.ssid.isBlank()) stringResource(R.string.hidden_network) else wifi.ssid
     Scaffold(
@@ -66,6 +73,11 @@ fun WifiDetailScreen(wifi: WifiData, onBack: () -> Unit) {
                 DetailRow(
                     stringResource(R.string.label_is_hidden),
                     stringResource(if (wifi.isHidden) R.string.yes else R.string.no)
+                )
+                DetailRow(
+                    stringResource(R.string.label_security),
+                    stringResource(if (wifi.isOpen) R.string.security_open else R.string.security_encrypted),
+                    valueColor = if (wifi.isOpen) MaterialTheme.colorScheme.error else Color.Unspecified
                 )
                 DetailRow(stringResource(R.string.label_band), wifi.band)
                 DetailRow(stringResource(R.string.label_wifi_standard), wifi.wifiStandard)
@@ -109,6 +121,21 @@ fun WifiDetailScreen(wifi: WifiData, onBack: () -> Unit) {
                     stringResource(R.string.label_occupied_channels),
                     stringResource(R.string.value_occupied_channels, occText, occChannels.size)
                 )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            DetailSection(title = stringResource(R.string.section_signal_history)) {
+                if (rssiHistory.size >= 2) {
+                    RssiTrendChart(samples = rssiHistory)
+                } else {
+                    Text(
+                        text = stringResource(R.string.signal_history_hint),
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

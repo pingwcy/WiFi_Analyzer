@@ -16,7 +16,16 @@ data class WifiData(
         val countryCode: String,  // AP 广播的 802.11d 国家码
         val bssLoad: BssLoad? = null,
         val beaconInfo: BeaconInfo? = null
-)
+) {
+    /** 是否为开放网络（无任何加密）。 */
+    val isOpen: Boolean
+        get() = !capabilities.contains("WEP") &&
+                !capabilities.contains("WPA") &&
+                !capabilities.contains("PSK") &&
+                !capabilities.contains("SAE") &&
+                !capabilities.contains("EAP") &&
+                !capabilities.contains("OWE")
+}
 // 适用于国家码
 enum class CountryCodeState {
         NOT_SUPPORTED, NOT_BROADCAST, INCOMPLETE, INVALID, READ_FAILED, VALID

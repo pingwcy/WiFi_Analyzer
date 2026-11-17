@@ -251,4 +251,30 @@
     <string name="spectrum_ap_list_title">AP List (tap to highlight)</string>
     <string name="spectrum_no_ap_hint">No AP found in this band</string>
     <string name="spectrum_ap_subtitle">CH %1$d · %2$s · %3$d dBm</string>
+
+    <!-- ===== Channel Recommendation ===== -->
+    <string name="recommendation_title">Recommended Channel</string>
+    <string name="recommendation_best">Use CH %1$d</string>
+    <string name="recommendation_hint">Based on minimal real-spectrum interference, adjacent-channel overlap considered</string>
+
+    <!-- ===== Security ===== -->
+    <string name="label_security">Security</string>
+    <string name="security_open">Open network (insecure)</string>
+    <string name="security_encrypted">Encrypted</string>
+    <string name="security_open_badge">Open</string>
+
+    <!-- ===== Continuous Scan & Signal History ===== -->
+    <string name="settings_continuous_scan_title">Continuous Scan</string>
+    <string name="settings_continuous_scan_desc">Auto-refresh every 5s while app is in foreground</string>
+    <string name="section_signal_history">Signal History</string>
+    <string name="signal_history_hint">Scan multiple times to see the trend</string>
+
+    <!-- ===== Export Report ===== -->
+    <string name="settings_export_report">Export Report</string>
+    <string name="report_share_title">Share Report</string>
+    <string name="report_share_subject">WiFi Analyzer Report</string>
+
+    <!-- ===== Recommendation ===== -->
+    <string name="recommendation_close">Close recommendation</string>
+    <string name="menu_show_recommendation">Show recommendation</string>
 </resources>

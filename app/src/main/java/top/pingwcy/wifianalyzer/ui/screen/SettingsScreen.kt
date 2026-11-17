@@ -1,5 +1,6 @@
 package top.pingwcy.wifianalyzer.ui.screen
 
+import android.content.Intent
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -29,11 +31,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.domain.AppLanguage
+import top.pingwcy.wifianalyzer.domain.ReportGenerator
 import top.pingwcy.wifianalyzer.ui.SortMode
 import top.pingwcy.wifianalyzer.ui.WifiViewModel
 
@@ -45,6 +49,7 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val activity = LocalActivity.current
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -92,6 +97,31 @@ fun SettingsScreen(
                 Switch(
                     checked = uiState.autoScanEnabled,
                     onCheckedChange = viewModel::setAutoScanEnabled
+                )
+            }
+
+            // 持续扫描开关（整行可点击）
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.setContinuousScanEnabled(!uiState.continuousScanEnabled) }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.settings_continuous_scan_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        stringResource(R.string.settings_continuous_scan_desc),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = uiState.continuousScanEnabled,
+                    onCheckedChange = viewModel::setContinuousScanEnabled
                 )
             }
 
@@ -156,6 +186,24 @@ fun SettingsScreen(
                     onClick = { viewModel.setSortMode(SortMode.FLAT) },
                     label = { Text(stringResource(R.string.settings_view_mode_flat)) }
                 )
+            }
+
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = {
+                    val report = ReportGenerator.generate(viewModel.uiState.value.wifiList)
+                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.report_share_subject))
+                        putExtra(Intent.EXTRA_TEXT, report)
+                    }
+                    context.startActivity(
+                        Intent.createChooser(sendIntent, context.getString(R.string.report_share_title))
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.settings_export_report))
             }
         }
     }

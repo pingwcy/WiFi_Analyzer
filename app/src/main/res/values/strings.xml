@@ -264,4 +264,30 @@
     <string name="spectrum_ap_list_title">AP 占用列表（点击高亮）</string>
     <string name="spectrum_no_ap_hint">当前频段没有扫描到 AP</string>
     <string name="spectrum_ap_subtitle">CH %1$d · %2$s · %3$d dBm</string>
+
+    <!-- ===== 信道推荐 ===== -->
+    <string name="recommendation_title">推荐信道</string>
+    <string name="recommendation_best">建议使用 CH %1$d</string>
+    <string name="recommendation_hint">依据真实频谱干扰最小原则，已考虑相邻信道重叠</string>
+
+    <!-- ===== 安全性 ===== -->
+    <string name="label_security">安全性</string>
+    <string name="security_open">开放网络（不安全）</string>
+    <string name="security_encrypted">已加密</string>
+    <string name="security_open_badge">开放</string>
+
+    <!-- ===== 持续扫描 & 信号历史 ===== -->
+    <string name="settings_continuous_scan_title">持续扫描</string>
+    <string name="settings_continuous_scan_desc">前台运行期间每 5 秒自动刷新</string>
+    <string name="section_signal_history">信号历史</string>
+    <string name="signal_history_hint">需要多次扫描后才能显示趋势</string>
+
+    <!-- ===== 导出报告 ===== -->
+    <string name="settings_export_report">导出报告</string>
+    <string name="report_share_title">分享报告</string>
+    <string name="report_share_subject">WiFi 分析报告</string>
+
+    <!-- ===== 推荐信道 ===== -->
+    <string name="recommendation_close">关闭推荐</string>
+    <string name="menu_show_recommendation">显示推荐信道</string>
 </resources>

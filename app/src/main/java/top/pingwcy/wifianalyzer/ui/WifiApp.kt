@@ -68,6 +68,7 @@ fun WifiScannerApp(
             if (wifi != null) {
                 WifiDetailScreen(
                     wifi = wifi,
+                    rssiHistory = uiState.rssiHistory[wifi.bssid] ?: emptyList(),
                     onBack = { navController.popBackStack() }
                 )
             } else {

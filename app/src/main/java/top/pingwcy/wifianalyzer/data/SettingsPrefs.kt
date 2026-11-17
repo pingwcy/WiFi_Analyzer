@@ -4,3 +4,4 @@ package top.pingwcy.wifianalyzer.data
 internal const val SETTINGS_PREFS_NAME = "settings"
 internal const val KEY_AUTO_SCAN_ENABLED = "auto_scan_enabled"
 internal const val KEY_APP_LANGUAGE = "app_language"
+internal const val KEY_CONTINUOUS_SCAN_ENABLED = "continuous_scan_enabled"
