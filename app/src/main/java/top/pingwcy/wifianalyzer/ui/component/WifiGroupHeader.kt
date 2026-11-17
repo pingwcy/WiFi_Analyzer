@@ -9,12 +9,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.model.WifiData
+import top.pingwcy.wifianalyzer.ui.theme.WiFiAnalyzerTheme
 
 @Composable
 fun WifiGroupHeader(
@@ -42,7 +43,6 @@ fun WifiGroupHeader(
         ) {
             Icon(
                 imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                // ✅ 替换 contentDescription
                 contentDescription = stringResource(
                     if (expanded) R.string.group_collapse else R.string.group_expand
                 ),
@@ -55,7 +55,6 @@ fun WifiGroupHeader(
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1
                 )
-                // ✅ 替换带参数的副标题
                 Text(
                     text = stringResource(
                         R.string.group_subtitle,
@@ -64,14 +63,28 @@ fun WifiGroupHeader(
                         strongest.band
                     ),
                     fontSize = 11.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             // 右侧放一个"查看最强"的按钮
             TextButton(onClick = { onOpenDetail(strongest) }) {
-                // ✅ 替换按钮文字
                 Text(stringResource(R.string.btn_detail), fontSize = 12.sp)
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun WifiGroupHeaderPreview() {
+    WiFiAnalyzerTheme {
+        WifiGroupHeader(
+            ssid = "MyHomeWiFi",
+            count = 3,
+            strongest = sampleWifi,
+            expanded = true,
+            onToggle = {},
+            onOpenDetail = {}
+        )
     }
 }

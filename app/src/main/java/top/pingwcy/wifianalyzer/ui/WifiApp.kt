@@ -4,6 +4,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.ui.screen.ChannelAnalysisScreen
+import top.pingwcy.wifianalyzer.ui.screen.SettingsScreen
 import top.pingwcy.wifianalyzer.ui.screen.WifiDetailScreen
 import top.pingwcy.wifianalyzer.ui.screen.WifiScannerScreen
 import androidx.navigation.NavType
@@ -17,6 +18,7 @@ object Routes {
     const val LIST = "list"
     const val DETAIL = "detail/{wifiId}"   // 详情页带参数
     const val CHANNEL = "channel"
+    const val SETTINGS = "settings"
 
     fun detail(wifiId: String) = "detail/$wifiId"
 }
@@ -40,6 +42,9 @@ fun WifiScannerApp(
                 },
                 onOpenChannelAnalysis = {
                     navController.navigate(Routes.CHANNEL)
+                },
+                onOpenSettings = {
+                    navController.navigate(Routes.SETTINGS)
                 },
                 viewModel = viewModel
             )
@@ -71,6 +76,14 @@ fun WifiScannerApp(
             ChannelAnalysisScreen(
                 wifiList = uiState.wifiList,
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ---------- 设置页 ----------
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                viewModel = viewModel
             )
         }
     }

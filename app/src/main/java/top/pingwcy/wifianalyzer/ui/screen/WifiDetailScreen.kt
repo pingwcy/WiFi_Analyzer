@@ -19,7 +19,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,8 +28,8 @@ import top.pingwcy.wifianalyzer.ui.component.DetailSection
 import top.pingwcy.wifianalyzer.domain.ChannelCalculator
 import top.pingwcy.wifianalyzer.domain.WifiStandards
 import top.pingwcy.wifianalyzer.model.WifiData
-import kotlin.text.ifEmpty
 import top.pingwcy.wifianalyzer.ui.component.BeaconInfoSections
+import top.pingwcy.wifianalyzer.ui.theme.signalColor
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WifiDetailScreen(wifi: WifiData, onBack: () -> Unit) {
@@ -79,11 +78,7 @@ fun WifiDetailScreen(wifi: WifiData, onBack: () -> Unit) {
                 DetailRow(
                     stringResource(R.string.label_signal_strength),
                     stringResource(R.string.value_dbm, wifi.rssi),
-                    valueColor = when {
-                        wifi.rssi >= -50 -> Color(0xFF4CAF50)
-                        wifi.rssi >= -70 -> Color(0xFFFF9800)
-                        else -> Color(0xFFF44336)
-                    }
+                    valueColor = signalColor(wifi.rssi)
                 )
                 DetailRow(
                     stringResource(R.string.label_primary_freq),

@@ -23,8 +23,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import top.pingwcy.wifianalyzer.R
+import top.pingwcy.wifianalyzer.ui.theme.WiFiAnalyzerTheme
 
 @Composable
 fun ExpandableDetailSection(
@@ -77,6 +79,16 @@ fun ExpandableDetailSection(
             ) {
                 content()
             }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ExpandableDetailSectionPreview() {
+    WiFiAnalyzerTheme {
+        ExpandableDetailSection(title = "Supported Rates / 支持速率") {
+            Text("54 Mbps", style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

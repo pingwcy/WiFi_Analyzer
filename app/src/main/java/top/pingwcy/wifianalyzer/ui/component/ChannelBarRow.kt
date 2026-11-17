@@ -4,18 +4,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.domain.ChannelUsage
 import androidx.compose.ui.res.stringResource
 import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.domain.Grade
+import top.pingwcy.wifianalyzer.ui.theme.WiFiAnalyzerTheme
+import top.pingwcy.wifianalyzer.ui.theme.scoreColor
 
 @Composable
 fun ChannelBarRow(
@@ -24,15 +27,13 @@ fun ChannelBarRow(
     onClick: () -> Unit
 ) {
     val s = item.score
-    // 颜色按综合分：越高越绿
-    val color = when {
-        s.score >= 80 -> Color(0xFF4CAF50)
-        s.score >= 60 -> Color(0xFF8BC34A)
-        s.score >= 40 -> Color(0xFFFF9800)
-        else -> Color(0xFFF44336)
+    val color = scoreColor(s.score)
+    // 条形图高度按等效负载（真实频谱占用）；空信道不画条
+    val fraction = if (item.load > 0.0) {
+        ((item.load / maxLoad).toFloat()).coerceIn(0f, 1f).coerceAtLeast(0.02f)
+    } else {
+        0f
     }
-    // 条形图高度按等效负载（真实频谱占用）
-    val fraction = ((item.load / maxLoad).toFloat()).coerceIn(0f, 1f).coerceAtLeast(0.02f)
 
     Row(
         modifier = Modifier
@@ -78,7 +79,19 @@ fun ChannelBarRow(
         Text(
             text = gradeText,
             fontSize = 12.sp,
-            color = Color.Gray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ChannelBarRowPreview() {
+    WiFiAnalyzerTheme {
+        ChannelBarRow(
+            item = sampleChannelUsage,
+            maxLoad = 2.0,
+            onClick = {}
         )
     }
 }

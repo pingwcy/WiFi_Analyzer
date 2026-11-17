@@ -6,7 +6,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -14,6 +13,7 @@ import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.domain.ChannelUsage
 import top.pingwcy.wifianalyzer.domain.Grade
+import top.pingwcy.wifianalyzer.ui.theme.scoreColor
 @Composable
 fun ChannelScoreDialog(
     item: ChannelUsage,
@@ -49,7 +49,7 @@ fun ChannelScoreDialog(
                         Grade.FAIR -> stringResource(R.string.grade_fair)
                         Grade.CROWDED -> stringResource(R.string.grade_crowded)
                     }
-                    Text(gradeText, fontSize = 13.sp, color = Color.Gray)
+                    Text(gradeText, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(4.dp))
 
@@ -62,7 +62,7 @@ fun ChannelScoreDialog(
                 Text(
                     avgSignalStr + utilStr,
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(Modifier.height(12.dp))
@@ -117,7 +117,7 @@ fun ChannelScoreDialog(
                     Text(
                         apDetailText,
                         fontSize = 11.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(6.dp))
                 }
@@ -142,14 +142,7 @@ private fun ScoreLine(label: String, delta: Int, bold: Boolean = false) {
             if (delta == 0) "0" else "$delta",
             fontSize = 13.sp,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-            color = if (delta == 0) Color.Gray else Color(0xFFF44336)
+            color = if (delta == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
         )
     }
-}
-
-private fun scoreColor(score: Int): Color = when {
-    score >= 80 -> Color(0xFF4CAF50)
-    score >= 60 -> Color(0xFF8BC34A)
-    score >= 40 -> Color(0xFFFF9800)
-    else -> Color(0xFFF44336)
 }

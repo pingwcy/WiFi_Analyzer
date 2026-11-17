@@ -4,13 +4,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.domain.WifiStandards
+import top.pingwcy.wifianalyzer.ui.theme.WiFiAnalyzerTheme
+import top.pingwcy.wifianalyzer.ui.theme.signalColor
 
 @Composable
 fun WifiCard(wifi: WifiData, onClick: () -> Unit) {
@@ -29,7 +30,6 @@ fun WifiCard(wifi: WifiData, onClick: () -> Unit) {
 
             Text(
                 text = displaySsid,
-                fontSize = 18.sp,
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -40,15 +40,11 @@ fun WifiCard(wifi: WifiData, onClick: () -> Unit) {
                 // 带参数替换
                 Text(
                     text = stringResource(R.string.wifi_card_frequency, wifi.frequency),
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = stringResource(R.string.wifi_card_signal, wifi.rssi),
-                    color = when {
-                        wifi.rssi >= -50 -> Color(0xFF4CAF50)
-                        wifi.rssi >= -70 -> Color(0xFFFF9800)
-                        else -> Color(0xFFF44336)
-                    }
+                    color = signalColor(wifi.rssi)
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
@@ -58,11 +54,11 @@ fun WifiCard(wifi: WifiData, onClick: () -> Unit) {
             ) {
                 Text(
                     text = stringResource(R.string.wifi_card_width, WifiStandards.widthText(wifi.channelWidth)),
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = stringResource(R.string.wifi_card_channel, wifi.primaryChannel),
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 // 处理国家码为空的情况
@@ -71,9 +67,17 @@ fun WifiCard(wifi: WifiData, onClick: () -> Unit) {
                 }
                 Text(
                     text = stringResource(R.string.wifi_card_country, displayCountry),
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun WifiCardPreview() {
+    WiFiAnalyzerTheme {
+        WifiCard(wifi = sampleWifi, onClick = {})
     }
 }

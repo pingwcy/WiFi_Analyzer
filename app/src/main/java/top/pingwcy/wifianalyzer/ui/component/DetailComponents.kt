@@ -7,10 +7,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-// ============ 详情页 ============
-
+import top.pingwcy.wifianalyzer.ui.theme.WiFiAnalyzerTheme
 
 @Composable
 fun DetailSection(title: String, content: @Composable () -> Unit) {
@@ -40,11 +40,24 @@ fun DetailRow(label: String, value: String, valueColor: Color = Color.Unspecifie
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, fontSize = 14.sp, color = Color.Gray)
+        Text(text = label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             text = value,
             fontSize = 14.sp,
             color = if (valueColor == Color.Unspecified) MaterialTheme.colorScheme.onSurface else valueColor
         )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun DetailComponentsPreview() {
+    WiFiAnalyzerTheme {
+        Column(modifier = Modifier.padding(16.dp)) {
+            DetailSection(title = "基本信息") {
+                DetailRow("SSID", "MyHomeWiFi")
+                DetailRow("信号强度", "-55 dBm")
+            }
+        }
     }
 }

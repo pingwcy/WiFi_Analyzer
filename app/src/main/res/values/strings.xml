@@ -238,4 +238,22 @@
     <string name="channel_label">CH %1$d</string>
     <string name="scan_empty_result">未扫描到 WiFi，请检查 GPS 定位开关</string>
     <string name="scan_failed">扫描失败：%1$s</string>
+
+    <!-- ===== 列表空状态 ===== -->
+    <string name="list_scanning_hint">正在扫描附近的 WiFi…</string>
+    <string name="list_empty_hint">暂无 WiFi 数据</string>
+    <string name="list_empty_action">点击上方按钮开始扫描</string>
+
+    <!-- ===== 设置页 ===== -->
+    <string name="menu_settings">设置</string>
+    <string name="settings_title">设置</string>
+    <string name="settings_auto_scan_title">自动扫描</string>
+    <string name="settings_auto_scan_desc">打开应用时自动扫描附近的 WiFi</string>
+    <string name="settings_view_mode_title">默认视图模式</string>
+    <string name="settings_view_mode_grouped">按 SSID 聚合</string>
+    <string name="settings_view_mode_flat">全部列表</string>
+    <string name="settings_language_title">语言</string>
+    <string name="settings_language_system">跟随系统</string>
+    <string name="settings_language_chinese">中文</string>
+    <string name="settings_language_english">English</string>
 </resources>

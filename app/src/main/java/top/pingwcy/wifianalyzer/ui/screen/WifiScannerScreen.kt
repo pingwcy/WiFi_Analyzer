@@ -1,66 +1,81 @@
 package top.pingwcy.wifianalyzer.ui.screen
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
-import android.net.wifi.WifiAvailableChannel
-import android.net.wifi.WifiManager
 import android.os.Build
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.model.BandFilter
 import top.pingwcy.wifianalyzer.model.WifiData
-import top.pingwcy.wifianalyzer.ui.WifiViewModel
-import top.pingwcy.wifianalyzer.ui.component.FilterChipRow
-import top.pingwcy.wifianalyzer.ui.component.WifiCard
 import top.pingwcy.wifianalyzer.model.groupKey
 import top.pingwcy.wifianalyzer.ui.SortMode
+import top.pingwcy.wifianalyzer.ui.WifiViewModel
+import top.pingwcy.wifianalyzer.ui.component.ChannelInfoDialog
+import top.pingwcy.wifianalyzer.ui.component.FilterChipRow
+import top.pingwcy.wifianalyzer.ui.component.WifiCard
 import top.pingwcy.wifianalyzer.ui.component.WifiGroupHeader
-import androidx.compose.ui.res.stringResource
-import top.pingwcy.wifianalyzer.R
 
 data class WifiGroup(
     val key: String,
     val ssid: String,          // 隐藏网络显示 "(隐藏网络)"
-    val networks: List<WifiData>, // 已按 rssi 降序
-    val isExpanded: Boolean
+    val networks: List<WifiData> // 已按 rssi 降序
 ) {
     val strongest: WifiData get() = networks.first()
     val maxRssi: Int get() = strongest.rssi
     val count: Int get() = networks.size
 }
 
-fun buildWifiGroups(
-    list: List<WifiData>,
-    expandedKeys: Set<String>
-): List<WifiGroup> =
+fun buildWifiGroups(list: List<WifiData>): List<WifiGroup> =
     list.groupBy { groupKey(it) }
         .map { (key, group) ->
             val sorted = group.sortedByDescending { it.rssi }
             WifiGroup(
                 key = key,
                 ssid = sorted.first().ssid.takeIf { it.isNotBlank() } ?: "(隐藏网络)",
-                networks = sorted,
-                isExpanded = key in expandedKeys
+                networks = sorted
             )
         }
         // 组间按组内最强信号降序；信号相同再按 SSID 字母序，保证稳定
@@ -74,12 +89,12 @@ fun buildWifiGroups(
 fun WifiScannerScreen(
     onItemClick: (WifiData) -> Unit,
     onOpenChannelAnalysis: () -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: WifiViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val bandFilter = uiState.bandFilter
-    // 把菜单状态放到最上面
     var showMenu by remember { mutableStateOf(false) }
     var showChannelInfoDialog by remember { mutableStateOf(false) }
 
@@ -91,6 +106,14 @@ fun WifiScannerScreen(
         else
             Manifest.permission.ACCESS_FINE_LOCATION
     )
+
+    // 首次进入：请求一次「自动扫描」决策（由 ViewModel 结合设置与权限决定，且仅触发一次）
+    LaunchedEffect(Unit) {
+        val allGranted = permissionsToRequest.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+        viewModel.requestInitialAutoScan(allGranted)
+    }
 
     val errorMessage = uiState.errorResId?.let { resId ->
         uiState.errorArg?.let { stringResource(resId, it) } ?: stringResource(resId)
@@ -122,7 +145,6 @@ fun WifiScannerScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
-                    // 三个点菜单
                     IconButton(onClick = { showMenu = !showMenu }) {
                         Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.menu_more))
                     }
@@ -145,26 +167,13 @@ fun WifiScannerScreen(
                             }
                         )
                         DropdownMenuItem(
-                            text = {
-                                // ✅ 根据当前的排序模式，提示用户“切换后”会变成什么
-                                Text(
-                                    if (uiState.sortMode == SortMode.GROUPED) {
-                                        stringResource(R.string.menu_switch_to_flat)
-                                    } else {
-                                        stringResource(R.string.menu_switch_to_grouped)
-                                    }
-                                )
-                            },
+                            text = { Text(stringResource(R.string.menu_settings)) },
                             onClick = {
                                 showMenu = false
-                                // 切换逻辑没问题，保持原样
-                                viewModel.setSortMode(
-                                    if (uiState.sortMode == SortMode.GROUPED) SortMode.FLAT else SortMode.GROUPED
-                                )
+                                onOpenSettings()
                             }
                         )
                     }
-
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -195,6 +204,14 @@ fun WifiScannerScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isScanning
             ) {
+                if (uiState.isScanning) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
                 Text(
                     if (uiState.isScanning) stringResource(R.string.btn_scanning)
                     else stringResource(R.string.btn_start_scan)
@@ -210,23 +227,19 @@ fun WifiScannerScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-
-// 聚合视图的组列表（FLAT 模式不构建，省一点）
-// —— 提到 Column 外层或这里都行，建议和 filteredList 放一起 ——
             val groupedList = remember(filteredList) {
-                buildWifiGroups(filteredList, emptySet())   // isExpanded 不再存组里
+                buildWifiGroups(filteredList)
             }
             val flatSorted = remember(filteredList, uiState.sortMode) {
                 if (uiState.sortMode == SortMode.FLAT)
                     filteredList.sortedByDescending { it.rssi }
                 else emptyList()
             }
-// 先把筛选名取出来（Composable 上下文）
+
             val filterLabel = if (bandFilter != BandFilter.ALL)
-                stringResource(bandFilter.labelRes)   // 或 bandFilter.labelText()
+                stringResource(bandFilter.labelRes)
             else null
 
-// 主文案
             val baseText = when (uiState.sortMode) {
                 SortMode.GROUPED -> stringResource(
                     R.string.count_grouped, groupedList.size, filteredList.size
@@ -236,184 +249,101 @@ fun WifiScannerScreen(
                 )
             }
 
-// 条件后缀
             val countText = if (filterLabel != null)
                 baseText + stringResource(R.string.count_filtered_suffix, filterLabel)
             else
                 baseText
 
             Text(
-                text = countText, fontSize = 12.sp, color = Color.Gray,
+                text = countText, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                when (uiState.sortMode) {
-                    SortMode.GROUPED -> {
-                        groupedList.forEach { group ->
-                            if (group.count == 1) {
-                                item(key = "ap:${group.strongest.bssid}") {
-                                    WifiCard(
-                                        group.strongest,
-                                        onClick = { onItemClick(group.strongest) })
+            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                when {
+                    // 扫描中且没有旧数据：显示加载中
+                    uiState.isScanning && filteredList.isEmpty() -> {
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator()
+                            Spacer(Modifier.height(12.dp))
+                            Text(stringResource(R.string.list_scanning_hint), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+
+                    // 无数据：持久空状态提示
+                    filteredList.isEmpty() -> {
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("📡", fontSize = 40.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                stringResource(R.string.list_empty_hint),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 16.sp
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.list_empty_action),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            when (uiState.sortMode) {
+                                SortMode.GROUPED -> {
+                                    groupedList.forEach { group ->
+                                        if (group.count == 1) {
+                                            item(key = "ap:${group.strongest.bssid}") {
+                                                WifiCard(
+                                                    group.strongest,
+                                                    onClick = { onItemClick(group.strongest) }
+                                                )
+                                            }
+                                        } else {
+                                            item(key = "group:${group.key}") {
+                                                WifiGroupHeader(
+                                                    ssid = group.ssid,
+                                                    count = group.count,
+                                                    strongest = group.strongest,
+                                                    expanded = group.key in uiState.expandedKeys,
+                                                    onToggle = { viewModel.toggleGroup(group.key) },
+                                                    onOpenDetail = onItemClick
+                                                )
+                                            }
+                                            if (group.key in uiState.expandedKeys) {
+                                                items(group.networks, key = { "ap:${it.bssid}" }) { wifi ->
+                                                    WifiCard(wifi = wifi, onClick = { onItemClick(wifi) })
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
-                            } else {
-                                item(key = "group:${group.key}") {
-                                    WifiGroupHeader(
-                                        ssid = group.ssid,
-                                        count = group.count,
-                                        strongest = group.strongest,
-                                        expanded = group.key in uiState.expandedKeys,
-                                        onToggle = { viewModel.toggleGroup(group.key) },
-                                        onOpenDetail = onItemClick
-                                    )
-                                }
-                                if (group.key in uiState.expandedKeys) {
-                                    items(group.networks, key = { "ap:${it.bssid}" }) { wifi ->
+
+                                SortMode.FLAT -> {
+                                    items(flatSorted, key = { "ap:${it.bssid}" }) { wifi ->
                                         WifiCard(wifi = wifi, onClick = { onItemClick(wifi) })
                                     }
                                 }
                             }
                         }
                     }
-
-                    SortMode.FLAT -> {
-                        items(flatSorted, key = { "ap:${it.bssid}" }) { wifi ->
-                            WifiCard(wifi = wifi, onClick = { onItemClick(wifi) })
-                        }
-                    }
                 }
             }
         }
-        // 弹窗：显示本机信道信息
+    }
 
-        if (showChannelInfoDialog) {
-
-            val wm = context.applicationContext
-                .getSystemService(Context.WIFI_SERVICE) as WifiManager
-
-            // 获取当前监管域允许使用的信道
-            val supportedFrequencies: List<Int> =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    val result = mutableListOf<Int>()
-
-                    // 使用硬编码的频段值：1=2.4G, 6=5G(含DFS), 8=6G
-                    for (band in listOf(1, 6, 8)) {
-                        try {
-                            result += wm.getAllowedChannels(band, WifiAvailableChannel.OP_MODE_STA)
-                                .map { it.frequencyMhz }
-                        } catch (e: SecurityException) {
-                            Log.e("ChannelInfo", "缺少 NEARBY_WIFI_DEVICES 权限", e)
-                        } catch (e: Exception) {
-                            Log.e("ChannelInfo", "band=$band 获取失败", e)
-                        }
-                    }
-                    // 这里直接返回结果
-                    result.distinct().sorted()
-                } else {
-                    // 补上 else 分支返回空列表
-                    emptyList()
-                }
-
-            // 将频率转换为信道号
-            fun frequencyToChannel(freq: Int): Int {
-                return when (freq) {
-                    in 2412..2472 -> (freq - 2407) / 5
-                    2484 -> 14
-                    in 5000..5895 -> (freq - 5000) / 5
-                    in 5955..7115 -> (freq - 5950) / 5
-                    else -> -1
-                }
-            }
-
-            AlertDialog(
-                onDismissRequest = {
-                    showChannelInfoDialog = false
-                },
-                title = {
-                    Text(stringResource(R.string.dialog_channel_title)) // ✅ 本机 Wi-Fi 能力
-                },
-                text = {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 400.dp)
-                            .verticalScroll(rememberScrollState())
-                    ) {
-                        Text(stringResource(R.string.dialog_current_domain)) // ✅ 当前 Wi-Fi 监管域
-
-                        Text(
-                            stringResource(R.string.dialog_country_code_unknown), // ✅ 国家码：无法通过...
-                            fontSize = 12.sp,
-                            color = Color.Gray
-                        )
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Text(stringResource(R.string.dialog_allowed_channels)) // ✅ 监管域允许使用的信道
-
-                        Spacer(Modifier.height(6.dp))
-
-                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                            Text(
-                                stringResource(R.string.dialog_android_too_old), // ✅ 当前 Android 版本低于...
-                                color = Color.Red,
-                                fontSize = 12.sp
-                            )
-                        } else if (supportedFrequencies.isEmpty()) {
-                            Text(
-                                stringResource(R.string.dialog_no_channels), // ✅ 未获取到允许使用的信道列表...
-                                color = Color.Red,
-                                fontSize = 12.sp
-                            )
-                        } else {
-                            // ✅ 带参数：共 %1$d 个允许的信道
-                            Text(
-                                stringResource(R.string.dialog_channel_count, supportedFrequencies.size),
-                                color = Color(0xFF4CAF50)
-                            )
-
-                            Spacer(Modifier.height(8.dp))
-
-                            supportedFrequencies.forEach { freq ->
-                                val channel = frequencyToChannel(freq)
-
-                                // ✅ 这里的频段名称也提取了资源
-                                val bandName = when (freq) {
-                                    in 2400..2500 -> stringResource(R.string.band_2g)
-                                    in 4900..5900 -> stringResource(R.string.band_5g)
-                                    in 5925..7125 -> stringResource(R.string.band_6g)
-                                    else -> stringResource(R.string.band_other)
-                                }
-
-                                // ✅ 带参数：%1$s  |  Channel %2$d  |  %3$d MHz
-                                Text(
-                                    stringResource(R.string.dialog_channel_line, bandName, channel, freq),
-                                    fontSize = 12.sp,
-                                    color = Color.Gray
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Text(
-                            stringResource(R.string.dialog_note), // ✅ 注：以上数据表示当前监管域允许...
-                            fontSize = 11.sp,
-                            color = Color.Gray
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showChannelInfoDialog = false
-                        }
-                    ) {
-                        Text(stringResource(R.string.btn_ok)) // ✅ 知道了
-                    }
-                }
-            )
-        }
+    if (showChannelInfoDialog) {
+        ChannelInfoDialog(onDismiss = { showChannelInfoDialog = false })
     }
 }

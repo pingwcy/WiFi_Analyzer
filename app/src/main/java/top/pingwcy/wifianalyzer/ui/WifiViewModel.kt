@@ -10,7 +10,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import top.pingwcy.wifianalyzer.R
+import top.pingwcy.wifianalyzer.data.SettingsRepositoryImpl
 import top.pingwcy.wifianalyzer.data.WifiScanner
+import top.pingwcy.wifianalyzer.domain.AppLanguage
+import top.pingwcy.wifianalyzer.domain.SettingsRepository
 import top.pingwcy.wifianalyzer.domain.WifiRepository
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.model.BandFilter
@@ -29,15 +32,38 @@ data class WifiUiState(
     val errorArg: String? = null,   // 错误消息格式化参数（可选）
     val bandFilter: BandFilter = BandFilter.ALL,
     val expandedKeys: Set<String> = emptySet(),  // 已展开的分组 key
-    val sortMode: SortMode = SortMode.GROUPED     // 默认聚合视图
+    val sortMode: SortMode = SortMode.GROUPED,   // 默认聚合视图
+    val autoScanEnabled: Boolean = true,         // 默认开启自动扫描
+    val appLanguage: AppLanguage = AppLanguage.SYSTEM
 )
 
 class WifiViewModel(
-    private val repository: WifiRepository
+    private val repository: WifiRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WifiUiState())
     val uiState: StateFlow<WifiUiState> = _uiState.asStateFlow()
+
+    // 自动扫描只应在应用生命周期内触发一次，避免从详情/信道页返回时重复扫描。
+    private var settingsLoaded = false
+    private var autoScanHandled = false
+    private var permissionGranted = false
+
+    init {
+        viewModelScope.launch {
+            settingsRepository.autoScanEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(autoScanEnabled = enabled)
+                settingsLoaded = true
+                maybeTriggerAutoScan()
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.appLanguage.collect { language ->
+                _uiState.value = _uiState.value.copy(appLanguage = language)
+            }
+        }
+    }
 
     fun setBandFilter(filter: BandFilter) {
         _uiState.value = _uiState.value.copy(bandFilter = filter)
@@ -54,6 +80,39 @@ class WifiViewModel(
         )
     }
 
+    fun setAutoScanEnabled(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(autoScanEnabled = enabled)
+        viewModelScope.launch { settingsRepository.setAutoScanEnabled(enabled) }
+    }
+
+    fun setAppLanguage(language: AppLanguage) {
+        _uiState.value = _uiState.value.copy(appLanguage = language)
+        viewModelScope.launch { settingsRepository.setAppLanguage(language) }
+    }
+
+    /**
+     * 由列表页在首次进入时调用一次，传入当前权限是否已授予。
+     *
+     * 只有「设置已加载 + 权限已授予 + 自动扫描开启」三者同时满足时才会真正触发扫描；
+     * 且无论结果如何，该决策只执行一次，后续页面返回不会重复触发。
+     */
+    fun requestInitialAutoScan(permissionsGranted: Boolean) {
+        permissionGranted = permissionsGranted
+        maybeTriggerAutoScan()
+    }
+
+    private fun maybeTriggerAutoScan() {
+        if (autoScanHandled || !settingsLoaded) return
+        if (!permissionGranted) {
+            autoScanHandled = true
+            return
+        }
+        autoScanHandled = true
+        if (_uiState.value.autoScanEnabled) {
+            scan()
+        }
+    }
+
     fun scan() {
         if (_uiState.value.isScanning) return
         viewModelScope.launch {
@@ -63,7 +122,7 @@ class WifiViewModel(
                 _uiState.value = _uiState.value.copy(
                     wifiList = results,
                     isScanning = false,
-                    // 可选：扫描后清理已不存在的展开 key，避免 Set 无限增长
+                    // 扫描后清理已不存在的展开 key，避免 Set 无限增长
                     expandedKeys = _uiState.value.expandedKeys.filter { key ->
                         results.any { groupKey(it) == key }
                     }.toSet()
@@ -86,7 +145,10 @@ class WifiViewModel(
             initializer {
                 val application =
                     this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]!!
-                WifiViewModel(WifiScanner(application))
+                WifiViewModel(
+                    repository = WifiScanner(application),
+                    settingsRepository = SettingsRepositoryImpl(application)
+                )
             }
         }
     }
