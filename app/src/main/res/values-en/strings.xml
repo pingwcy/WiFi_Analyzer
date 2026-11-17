@@ -34,7 +34,7 @@
     <string name="wifi_card_channel">Channel: %1$d</string>
     <string name="wifi_card_country">Country: %1$s</string>
     <!-- 通用 -->
-    <string name="btn_back">Return</string>
+    <string name="btn_back">Back</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="none">None</string>
@@ -48,7 +48,7 @@
     <!-- 字段标签 -->
     <string name="label_ssid">SSID</string>
     <string name="label_bssid">BSSID</string>
-    <string name="label_is_hidden">IsHidden</string>
+    <string name="label_is_hidden">Is Hidden</string>
     <string name="label_band">Band</string>
     <string name="label_wifi_standard">WiFi Standard</string>
     <string name="label_ap_country_code">AP Country Code</string> <!-- 或者翻译成"AP 国家码" -->
@@ -56,14 +56,14 @@
     <string name="label_signal_strength">Signal Strength</string>
     <string name="label_primary_freq">Main Channel Freq</string>
     <string name="label_primary_channel">Main Channel Num</string>
-    <string name="label_channel_width">Channel Witdh</string>
+    <string name="label_channel_width">Channel Width</string>
     <string name="label_center_freq_0">CenterFreq 0</string>
     <string name="label_center_freq_1">CenterFreq 1</string>
     <string name="label_occupied_channels">Occupied Channels</string>
 
     <string name="label_station_count">Associated STA</string>
     <string name="label_channel_utilization">Channel Utilization</string>
-    <string name="label_available_capacity">Remain Capability</string>
+    <string name="label_available_capacity">Remaining Capacity</string>
     <string name="bss_load_unavailable">No BSS Load Info</string>
 
     <!-- 数值格式化 -->
@@ -100,7 +100,7 @@
     <string name="score_total_label">Score：</string>
     <string name="score_total_value">%1$d / 100</string>
     <string name="score_avg_signal">Average Signal %1$s dBm</string>
-    <string name="score_avg_utilization"> · Average Uagse %1$s%%</string>
+    <string name="score_avg_utilization"> · Average Usage %1$s%%</string>
     <string name="score_no_bss_load"> · No BSS Load Data</string>
 
     <!-- 扣分明细 -->
@@ -109,7 +109,7 @@
     <string name="score_signal_strength">Signal Strength（Average）</string>
     <string name="score_bss_load">BSS Load</string>
     <string name="score_bss_load_no_data">BSS Load（No Data）</string>
-    <string name="score_total_penalty">All Penalty</string>
+    <string name="score_total_penalty">Total Penalty</string>
 
     <!-- 各 AP 明细 -->
     <string name="score_ap_details_title">Per AP Detail（%1$d）</string>
@@ -127,12 +127,102 @@
     <string name="grade_crowded">Crowded</string>
 
     <!-- WifiGroupHeader -->
-    <string name="group_collapse">Fold</string>
-    <string name="group_expand">Span</string>
+    <string name="group_collapse">Collapse</string>
+    <string name="group_expand">Expand</string>
     <string name="group_subtitle">%1$d APs · Strongest %2$d dBm · %3$s</string>
     <string name="btn_detail">Detail</string>
     <!-- 关闭按钮 -->
     <string name="btn_close">Close</string>
     <!-- 默认值 -->
-    <string name="unknown">?</string>
+    <string name="unknown">Unknown</string>
+
+    <!-- ===== Beacon IE 详情（i18n 补充） ===== -->
+    <string name="beacon_ie_details_title">Beacon IE Details</string>
+    <string name="beacon_info_unavailable">This device does not provide readable Beacon IE information</string>
+    <string name="beacon_country_title">Country / Regulatory Info</string>
+    <string name="beacon_country_not_found">No Country IE</string>
+    <string name="beacon_country_code">Country Code</string>
+    <string name="beacon_environment">Environment</string>
+    <string name="beacon_unspecified">Unspecified</string>
+    <string name="beacon_channel_range">Channel Range %1$d</string>
+    <string name="beacon_country_triplet">First Channel %1$d, Count %2$d, Max Power %3$s dBm</string>
+    <string name="beacon_rates_title">Supported Rates</string>
+    <string name="beacon_no_rates">No rate info</string>
+    <string name="beacon_rate_index">Rate %1$d</string>
+    <string name="beacon_rate_basic"> (basic)</string>
+    <string name="beacon_rsn_title">RSN / RSNXE Security</string>
+    <string name="beacon_rsn_unavailable">RSN not parsed or not broadcast</string>
+    <string name="beacon_rsn_version">RSN Version</string>
+    <string name="beacon_group_cipher">Group Cipher</string>
+    <string name="beacon_pairwise_cipher">Pairwise Ciphers</string>
+    <string name="beacon_akm">AKM</string>
+    <string name="beacon_mfp">MFP</string>
+    <string name="beacon_mfp_required">Required</string>
+    <string name="beacon_mfp_capable">Capable</string>
+    <string name="beacon_mfp_unsupported">Unsupported</string>
+    <string name="beacon_rsnxe_raw">RSNXE Raw Data</string>
+    <string name="beacon_ht_title">HT Capabilities / 802.11n</string>
+    <string name="beacon_ht_unavailable">No HT info</string>
+    <string name="beacon_ht_capabilities">HT Capabilities</string>
+    <string name="beacon_max_amsdu">Max A-MSDU Length</string>
+    <string name="beacon_bytes">%1$d bytes</string>
+    <string name="beacon_ampdu_params">A-MPDU Parameters</string>
+    <string name="beacon_rx_mcs">RX MCS Set</string>
+    <string name="beacon_ht_operation">HT Operation</string>
+    <string name="beacon_vht_title">VHT Capabilities / 802.11ac</string>
+    <string name="beacon_vht_unavailable">No VHT info</string>
+    <string name="beacon_vht_capabilities">VHT Capabilities</string>
+    <string name="beacon_rx_mcs_map">RX MCS Map</string>
+    <string name="beacon_tx_mcs_map">TX MCS Map</string>
+    <string name="beacon_vht_operation">VHT Operation</string>
+    <string name="beacon_he_title">HE / 802.11ax</string>
+    <string name="beacon_he_unavailable">No HE info</string>
+    <string name="beacon_he_parser_note">Parser keeps raw HE IE content; MAC/PHY bitfield parsing not finished yet.</string>
+    <string name="beacon_he_cap_raw">HE Capabilities IE Raw Data</string>
+    <string name="beacon_he_phy_raw">HE PHY Raw Data</string>
+    <string name="beacon_he_rx_mcs">HE RX MCS / NSS</string>
+    <string name="beacon_he_operation">HE Operation</string>
+    <string name="beacon_eht_title">EHT / 802.11be</string>
+    <string name="beacon_eht_unavailable">No EHT info</string>
+    <string name="beacon_eht_parser_note">Parser keeps raw EHT IE content; MAC/PHY bitfield parsing not finished yet.</string>
+    <string name="beacon_eht_cap_raw">EHT Capabilities IE Raw Data</string>
+    <string name="beacon_eht_phy_raw">EHT PHY Raw Data</string>
+    <string name="beacon_eht_operation">EHT Operation</string>
+    <string name="beacon_wmm_title">WMM / QoS</string>
+    <string name="beacon_wmm_unavailable">WMM not parsed or not broadcast</string>
+    <string name="beacon_wmm_version">WMM Version</string>
+    <string name="beacon_uapsd">U-APSD</string>
+    <string name="beacon_parameterized">Parameterized</string>
+    <string name="beacon_ext_cap_title">Extended Capabilities</string>
+    <string name="beacon_ext_cap_raw">Extended Capabilities Raw Data</string>
+    <string name="beacon_power_envelope_title">Transmit Power Envelope</string>
+    <string name="beacon_power_envelope_raw">Transmit Power Envelope Raw Data</string>
+    <string name="beacon_mobility_title">Mobility Domain / 802.11r</string>
+    <string name="beacon_mobility_raw">Mobility Domain Raw Data</string>
+    <string name="beacon_vendor_title">Vendor Specific</string>
+    <string name="beacon_vendor_unavailable">No vendor IE</string>
+    <string name="beacon_vendor_index">Vendor IE %1$d</string>
+    <string name="beacon_vendor_type">Vendor Type</string>
+    <string name="beacon_vendor_data">Vendor IE Data</string>
+    <string name="beacon_rnr_title">RNR / Reduced Neighbor Report</string>
+    <string name="beacon_rnr_unavailable">No RNR info</string>
+    <string name="beacon_rnr_index">RNR %1$d</string>
+    <string name="beacon_mbssid_title">Multiple BSSID</string>
+    <string name="beacon_mbssid_unavailable">No Multiple BSSID info</string>
+    <string name="beacon_mbssid_index">Multiple BSSID %1$d</string>
+    <string name="beacon_raw_title">Raw Information Elements</string>
+    <string name="beacon_raw_unavailable">No raw IE data</string>
+    <string name="beacon_ie_index">IE %1$d</string>
+    <string name="beacon_ie_id">ID=%1$d</string>
+    <string name="beacon_ie_ext_id">, Extension ID=%1$d</string>
+    <string name="beacon_ie_body">Body</string>
+    <string name="beacon_warnings_title">Parser Warnings</string>
+    <string name="beacon_no_warnings">No parse errors</string>
+    <string name="beacon_no_data">No data</string>
+    <string name="beacon_raw_data">Raw Data</string>
+
+    <!-- ===== 其他 i18n 补充 ===== -->
+    <string name="channel_label">CH %1$d</string>
+    <string name="scan_empty_result">No WiFi found. Check that location/GPS is enabled</string>
+    <string name="scan_failed">Scan failed: %1$s</string>
 </resources>

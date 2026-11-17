@@ -42,7 +42,7 @@ fun ChannelBarRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "CH ${item.channel}",
+            text = stringResource(R.string.channel_label, item.channel),
             fontSize = 13.sp,
             modifier = Modifier.width(56.dp)
         )

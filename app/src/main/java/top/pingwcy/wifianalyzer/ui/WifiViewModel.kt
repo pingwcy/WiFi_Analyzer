@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.data.WifiScanner
 import top.pingwcy.wifianalyzer.domain.WifiRepository
 import top.pingwcy.wifianalyzer.model.WifiData
@@ -24,7 +25,8 @@ enum class SortMode {
 data class WifiUiState(
     val wifiList: List<WifiData> = emptyList(),
     val isScanning: Boolean = false,
-    val errorMessage: String? = null,
+    val errorResId: Int? = null,    // 错误消息资源 ID（null 表示无错误）
+    val errorArg: String? = null,   // 错误消息格式化参数（可选）
     val bandFilter: BandFilter = BandFilter.ALL,
     val expandedKeys: Set<String> = emptySet(),  // 已展开的分组 key
     val sortMode: SortMode = SortMode.GROUPED     // 默认聚合视图
@@ -55,7 +57,7 @@ class WifiViewModel(
     fun scan() {
         if (_uiState.value.isScanning) return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isScanning = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(isScanning = true, errorResId = null, errorArg = null)
             try {
                 val results = repository.scan()
                 _uiState.value = _uiState.value.copy(
@@ -67,14 +69,13 @@ class WifiViewModel(
                     }.toSet()
                 )
                 if (results.isEmpty()) {
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = "未扫描到 WiFi，请检查 GPS 定位开关"
-                    )
+                    _uiState.value = _uiState.value.copy(errorResId = R.string.scan_empty_result)
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isScanning = false,
-                    errorMessage = "扫描失败：${e.message}"
+                    errorResId = R.string.scan_failed,
+                    errorArg = e.message
                 )
             }
         }

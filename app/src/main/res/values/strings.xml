@@ -148,4 +148,94 @@
     <string name="btn_close">关闭</string>
     <!-- 默认值 -->
     <string name="unknown">未知</string>
+
+    <!-- ===== Beacon IE 详情（i18n 补充） ===== -->
+    <string name="beacon_ie_details_title">Beacon IE 详细信息</string>
+    <string name="beacon_info_unavailable">当前设备没有提供可读取的 Beacon IE 信息</string>
+    <string name="beacon_country_title">Country / 国家与监管信息</string>
+    <string name="beacon_country_not_found">未获取到 Country IE</string>
+    <string name="beacon_country_code">国家代码</string>
+    <string name="beacon_environment">环境</string>
+    <string name="beacon_unspecified">未指定</string>
+    <string name="beacon_channel_range">信道范围 %1$d</string>
+    <string name="beacon_country_triplet">起始信道 %1$d，数量 %2$d，最大功率 %3$s dBm</string>
+    <string name="beacon_rates_title">Supported Rates / 支持速率</string>
+    <string name="beacon_no_rates">没有速率信息</string>
+    <string name="beacon_rate_index">速率 %1$d</string>
+    <string name="beacon_rate_basic">（基本速率）</string>
+    <string name="beacon_rsn_title">RSN / RSNXE 安全信息</string>
+    <string name="beacon_rsn_unavailable">RSN 尚未解析或未广播</string>
+    <string name="beacon_rsn_version">RSN 版本</string>
+    <string name="beacon_group_cipher">组播加密</string>
+    <string name="beacon_pairwise_cipher">单播加密</string>
+    <string name="beacon_akm">密钥管理(AKM)</string>
+    <string name="beacon_mfp">受保护管理帧(MFP)</string>
+    <string name="beacon_mfp_required">必需</string>
+    <string name="beacon_mfp_capable">支持</string>
+    <string name="beacon_mfp_unsupported">不支持</string>
+    <string name="beacon_rsnxe_raw">RSNXE 原始数据</string>
+    <string name="beacon_ht_title">HT Capabilities / 802.11n</string>
+    <string name="beacon_ht_unavailable">没有 HT 信息</string>
+    <string name="beacon_ht_capabilities">HT Capabilities</string>
+    <string name="beacon_max_amsdu">最大 A-MSDU 长度</string>
+    <string name="beacon_bytes">%1$d 字节</string>
+    <string name="beacon_ampdu_params">A-MPDU 参数</string>
+    <string name="beacon_rx_mcs">接收 MCS 集合</string>
+    <string name="beacon_ht_operation">HT Operation</string>
+    <string name="beacon_vht_title">VHT Capabilities / 802.11ac</string>
+    <string name="beacon_vht_unavailable">没有 VHT 信息</string>
+    <string name="beacon_vht_capabilities">VHT Capabilities</string>
+    <string name="beacon_rx_mcs_map">RX MCS Map</string>
+    <string name="beacon_tx_mcs_map">TX MCS Map</string>
+    <string name="beacon_vht_operation">VHT Operation</string>
+    <string name="beacon_he_title">HE / 802.11ax</string>
+    <string name="beacon_he_unavailable">没有 HE 信息</string>
+    <string name="beacon_he_parser_note">当前解析器保存了 HE IE 原始内容，尚未完成 MAC / PHY 位域拆解。</string>
+    <string name="beacon_he_cap_raw">HE Capabilities IE 原始数据</string>
+    <string name="beacon_he_phy_raw">HE PHY 原始数据</string>
+    <string name="beacon_he_rx_mcs">HE RX MCS / NSS</string>
+    <string name="beacon_he_operation">HE Operation</string>
+    <string name="beacon_eht_title">EHT / 802.11be</string>
+    <string name="beacon_eht_unavailable">没有 EHT 信息</string>
+    <string name="beacon_eht_parser_note">当前解析器保存了 EHT IE 原始内容，尚未完成 MAC / PHY 位域拆解。</string>
+    <string name="beacon_eht_cap_raw">EHT Capabilities IE 原始数据</string>
+    <string name="beacon_eht_phy_raw">EHT PHY 原始数据</string>
+    <string name="beacon_eht_operation">EHT Operation</string>
+    <string name="beacon_wmm_title">WMM / QoS</string>
+    <string name="beacon_wmm_unavailable">WMM 尚未解析或未广播</string>
+    <string name="beacon_wmm_version">WMM 版本</string>
+    <string name="beacon_uapsd">U-APSD</string>
+    <string name="beacon_parameterized">参数化</string>
+    <string name="beacon_ext_cap_title">Extended Capabilities</string>
+    <string name="beacon_ext_cap_raw">扩展能力原始数据</string>
+    <string name="beacon_power_envelope_title">Transmit Power Envelope</string>
+    <string name="beacon_power_envelope_raw">发射功率原始数据</string>
+    <string name="beacon_mobility_title">Mobility Domain / 802.11r</string>
+    <string name="beacon_mobility_raw">Mobility Domain 原始数据</string>
+    <string name="beacon_vendor_title">Vendor Specific / 厂商信息</string>
+    <string name="beacon_vendor_unavailable">没有厂商 IE</string>
+    <string name="beacon_vendor_index">厂商 IE %1$d</string>
+    <string name="beacon_vendor_type">Vendor Type</string>
+    <string name="beacon_vendor_data">Vendor IE 数据</string>
+    <string name="beacon_rnr_title">RNR / Reduced Neighbor Report</string>
+    <string name="beacon_rnr_unavailable">没有 RNR 信息</string>
+    <string name="beacon_rnr_index">RNR %1$d</string>
+    <string name="beacon_mbssid_title">Multiple BSSID</string>
+    <string name="beacon_mbssid_unavailable">没有 Multiple BSSID 信息</string>
+    <string name="beacon_mbssid_index">Multiple BSSID %1$d</string>
+    <string name="beacon_raw_title">Raw Information Elements / 全部原始 IE</string>
+    <string name="beacon_raw_unavailable">没有原始 IE 数据</string>
+    <string name="beacon_ie_index">IE %1$d</string>
+    <string name="beacon_ie_id">ID=%1$d</string>
+    <string name="beacon_ie_ext_id">，Extension ID=%1$d</string>
+    <string name="beacon_ie_body">Body</string>
+    <string name="beacon_warnings_title">Parser Warnings / 解析警告</string>
+    <string name="beacon_no_warnings">没有解析错误</string>
+    <string name="beacon_no_data">无数据</string>
+    <string name="beacon_raw_data">原始数据</string>
+
+    <!-- ===== 其他 i18n 补充 ===== -->
+    <string name="channel_label">CH %1$d</string>
+    <string name="scan_empty_result">未扫描到 WiFi，请检查 GPS 定位开关</string>
+    <string name="scan_failed">扫描失败：%1$s</string>
 </resources>

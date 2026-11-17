@@ -22,7 +22,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import top.pingwcy.wifianalyzer.R
 
 @Composable
 fun ExpandableDetailSection(
@@ -60,7 +62,9 @@ fun ExpandableDetailSection(
                 } else {
                     Icons.Default.ExpandMore
                 },
-                contentDescription = if (expanded) "收起" else "展开",
+                contentDescription = stringResource(
+                    if (expanded) R.string.group_collapse else R.string.group_expand
+                ),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

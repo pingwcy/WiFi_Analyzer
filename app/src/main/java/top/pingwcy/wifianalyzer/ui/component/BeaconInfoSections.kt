@@ -1,4 +1,3 @@
-
 package top.pingwcy.wifianalyzer.ui.component
 
 import androidx.compose.foundation.layout.Column
@@ -10,10 +9,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.model.*
 
-private fun ByteArray.toHexString(): String {
-    if (isEmpty()) return "无数据"
+private fun ByteArray.toHexString(): String? {
+    if (isEmpty()) return null
     return joinToString(" ") {
         "%02X".format(it.toInt() and 0xFF)
     }
@@ -25,7 +25,7 @@ private fun Int.hexString(): String =
 @Composable
 private fun RawDataText(
     data: ByteArray?,
-    label: String = "原始数据"
+    label: String
 ) {
     if (data == null) return
 
@@ -37,7 +37,7 @@ private fun RawDataText(
         )
 
         Text(
-            text = data.toHexString(),
+            text = data.toHexString() ?: stringResource(R.string.beacon_no_data),
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -55,12 +55,12 @@ private fun BeaconRow(
 @Composable
 fun BeaconInfoSections(beacon: BeaconInfo?) {
     ExpandableDetailSection(
-        title = "Beacon IE 详细信息",
+        title = stringResource(R.string.beacon_ie_details_title),
         initiallyExpanded = false
     ) {
         if (beacon == null) {
             Text(
-                text = "当前设备没有提供可读取的 Beacon IE 信息",
+                text = stringResource(R.string.beacon_info_unavailable),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
@@ -69,25 +69,30 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
 
         // Country
         ExpandableDetailSection(
-            title = "Country / 国家与监管信息"
+            title = stringResource(R.string.beacon_country_title)
         ) {
             val country = beacon.country
 
             if (country == null) {
-                Text("未获取到 Country IE")
+                Text(stringResource(R.string.beacon_country_not_found))
             } else {
-                BeaconRow("国家代码", country.countryCode)
+                BeaconRow(stringResource(R.string.beacon_country_code), country.countryCode)
                 BeaconRow(
-                    "环境",
-                    country.environment?.toString() ?: "未指定"
+                    stringResource(R.string.beacon_environment),
+                    country.environment?.toString() ?: stringResource(R.string.beacon_unspecified)
                 )
 
                 country.triplets.forEachIndexed { index, triplet ->
+                    val power = triplet.maxPowerDbm?.toString()
+                        ?: stringResource(R.string.beacon_unspecified)
                     BeaconRow(
-                        "信道范围 ${index + 1}",
-                        "起始信道 ${triplet.firstChannel}，" +
-                                "数量 ${triplet.channelCount}，" +
-                                "最大功率 ${triplet.maxPowerDbm} dBm"
+                        stringResource(R.string.beacon_channel_range, index + 1),
+                        stringResource(
+                            R.string.beacon_country_triplet,
+                            triplet.firstChannel,
+                            triplet.channelCount,
+                            power
+                        )
                     )
                 }
             }
@@ -95,16 +100,17 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
 
         // Rates
         ExpandableDetailSection(
-            title = "Supported Rates / 支持速率"
+            title = stringResource(R.string.beacon_rates_title)
         ) {
             if (beacon.supportedRates.isEmpty()) {
-                Text("没有速率信息")
+                Text(stringResource(R.string.beacon_no_rates))
             } else {
                 beacon.supportedRates.forEachIndexed { index, rate ->
+                    val rateText = "${rate.mbps} Mbps" +
+                            if (rate.basic) stringResource(R.string.beacon_rate_basic) else ""
                     BeaconRow(
-                        "速率 ${index + 1}",
-                        "${rate.mbps} Mbps" +
-                                if (rate.basic) "（基本速率）" else ""
+                        stringResource(R.string.beacon_rate_index, index + 1),
+                        rateText
                     )
                 }
             }
@@ -112,24 +118,30 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
 
         // RSN
         ExpandableDetailSection(
-            title = "RSN / RSNXE 安全信息"
+            title = stringResource(R.string.beacon_rsn_title)
         ) {
             val rsn = beacon.rsn
 
             if (rsn == null) {
-                Text("RSN 尚未解析或未广播", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.beacon_rsn_unavailable), style = MaterialTheme.typography.bodyMedium)
             } else {
-                BeaconRow(label = "RSN 版本", value = rsn.version.toString())
-                BeaconRow(label = "组播加密", value = rsn.groupCipher ?: "未知")
-
                 BeaconRow(
-                    label = "单播加密",
-                    value = rsn.pairwiseCiphers.joinToString().ifEmpty { "无" }
+                    label = stringResource(R.string.beacon_rsn_version),
+                    value = rsn.version.toString()
+                )
+                BeaconRow(
+                    label = stringResource(R.string.beacon_group_cipher),
+                    value = rsn.groupCipher.ifEmpty { stringResource(R.string.unknown) }
                 )
 
-                // 解析 AKM
+                BeaconRow(
+                    label = stringResource(R.string.beacon_pairwise_cipher),
+                    value = rsn.pairwiseCiphers.joinToString().ifEmpty { stringResource(R.string.none) }
+                )
+
+                // AKM 名称是协议缩写，保持原文
                 val akmNames = rsn.akmSuites.map {
-                    when(it) {
+                    when (it) {
                         2 -> "PSK"
                         8 -> "SAE"
                         18 -> "OWE"
@@ -137,208 +149,216 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                         else -> "AKM($it)"
                     }
                 }
-                BeaconRow(label = "密钥管理(AKM)", value = akmNames.joinToString().ifEmpty { "无" })
-
-                // 注意：名字改成了 mfpCapable 和 mfpRequired
                 BeaconRow(
-                    label = "受保护管理帧(MFP)",
+                    label = stringResource(R.string.beacon_akm),
+                    value = akmNames.joinToString().ifEmpty { stringResource(R.string.none) }
+                )
+
+                BeaconRow(
+                    label = stringResource(R.string.beacon_mfp),
                     value = when {
-                        rsn.mfpRequired -> "必需"
-                        rsn.mfpCapable -> "支持"
-                        else -> "不支持"
+                        rsn.mfpRequired -> stringResource(R.string.beacon_mfp_required)
+                        rsn.mfpCapable -> stringResource(R.string.beacon_mfp_capable)
+                        else -> stringResource(R.string.beacon_mfp_unsupported)
                     }
                 )
             }
-            RawDataText(beacon.rsnxe, "RSNXE 原始数据")
+            RawDataText(beacon.rsnxe, stringResource(R.string.beacon_rsnxe_raw))
         }
 
         // HT
         ExpandableDetailSection(
-            title = "HT Capabilities / 802.11n"
+            title = stringResource(R.string.beacon_ht_title)
         ) {
             val ht = beacon.ht
 
             if (ht == null) {
-                Text("没有 HT 信息")
+                Text(stringResource(R.string.beacon_ht_unavailable))
             } else {
                 BeaconRow(
-                    "HT Capabilities",
+                    stringResource(R.string.beacon_ht_capabilities),
                     ht.capabilities.hexString()
                 )
 
                 ht.maxAmsduLength?.let {
-                    BeaconRow("最大 A-MSDU 长度", "$it bytes")
+                    BeaconRow(stringResource(R.string.beacon_max_amsdu), stringResource(R.string.beacon_bytes, it))
                 }
 
                 ht.ampduParameters?.let {
-                    BeaconRow("A-MPDU 参数", it.hexString())
+                    BeaconRow(stringResource(R.string.beacon_ampdu_params), it.hexString())
                 }
 
-                RawDataText(ht.rxMcsSet, "接收 MCS 集合")
-                RawDataText(ht.operation, "HT Operation")
+                RawDataText(ht.rxMcsSet, stringResource(R.string.beacon_rx_mcs))
+                RawDataText(ht.operation, stringResource(R.string.beacon_ht_operation))
             }
         }
 
         // VHT
         ExpandableDetailSection(
-            title = "VHT Capabilities / 802.11ac"
+            title = stringResource(R.string.beacon_vht_title)
         ) {
             val vht = beacon.vht
 
             if (vht == null) {
-                Text("没有 VHT 信息")
+                Text(stringResource(R.string.beacon_vht_unavailable))
             } else {
                 BeaconRow(
-                    "VHT Capabilities",
+                    stringResource(R.string.beacon_vht_capabilities),
                     "0x%08X".format(vht.capabilities)
                 )
 
                 vht.rxMcsMap?.let {
-                    BeaconRow("RX MCS Map", it.hexString())
+                    BeaconRow(stringResource(R.string.beacon_rx_mcs_map), it.hexString())
                 }
 
                 vht.txMcsMap?.let {
-                    BeaconRow("TX MCS Map", it.hexString())
+                    BeaconRow(stringResource(R.string.beacon_tx_mcs_map), it.hexString())
                 }
 
-                RawDataText(vht.operation, "VHT Operation")
+                RawDataText(vht.operation, stringResource(R.string.beacon_vht_operation))
             }
         }
 
         // HE
         ExpandableDetailSection(
-            title = "HE / 802.11ax"
+            title = stringResource(R.string.beacon_he_title)
         ) {
             val he = beacon.he
 
             if (he == null) {
-                Text("没有 HE 信息")
+                Text(stringResource(R.string.beacon_he_unavailable))
             } else {
                 Text(
-                    "当前解析器保存了 HE IE 原始内容，" +
-                            "尚未完成 MAC / PHY 位域拆解。",
+                    stringResource(R.string.beacon_he_parser_note),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
 
                 RawDataText(
                     he.macCapabilities,
-                    "HE Capabilities IE 原始数据"
+                    stringResource(R.string.beacon_he_cap_raw)
                 )
 
                 RawDataText(
                     he.phyCapabilities,
-                    "HE PHY 原始数据"
+                    stringResource(R.string.beacon_he_phy_raw)
                 )
 
                 RawDataText(
                     he.rxMcsNss,
-                    "HE RX MCS / NSS"
+                    stringResource(R.string.beacon_he_rx_mcs)
                 )
 
                 RawDataText(
                     he.operation,
-                    "HE Operation"
+                    stringResource(R.string.beacon_he_operation)
                 )
             }
         }
 
         // EHT
         ExpandableDetailSection(
-            title = "EHT / 802.11be"
+            title = stringResource(R.string.beacon_eht_title)
         ) {
             val eht = beacon.eht
 
             if (eht == null) {
-                Text("没有 EHT 信息")
+                Text(stringResource(R.string.beacon_eht_unavailable))
             } else {
                 Text(
-                    "当前解析器保存了 EHT IE 原始内容，" +
-                            "尚未完成 MAC / PHY 位域拆解。",
+                    stringResource(R.string.beacon_eht_parser_note),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
 
                 RawDataText(
                     eht.macCapabilities,
-                    "EHT Capabilities IE 原始数据"
+                    stringResource(R.string.beacon_eht_cap_raw)
                 )
 
                 RawDataText(
                     eht.phyCapabilities,
-                    "EHT PHY 原始数据"
+                    stringResource(R.string.beacon_eht_phy_raw)
                 )
 
                 RawDataText(
                     eht.operation,
-                    "EHT Operation"
+                    stringResource(R.string.beacon_eht_operation)
                 )
             }
         }
 
         // WMM
         ExpandableDetailSection(
-            title = "WMM / QoS"
+            title = stringResource(R.string.beacon_wmm_title)
         ) {
             val wmm = beacon.wmm
 
             if (wmm == null) {
-                Text("WMM 尚未解析或未广播")
+                Text(stringResource(R.string.beacon_wmm_unavailable))
             } else {
-                BeaconRow(label = "WMM 版本", value = wmm.version.toString())
-                BeaconRow(label = "U-APSD", value = if (wmm.uApsd) "支持" else "不支持")
-                BeaconRow(label = "参数化", value = if (wmm.parameterized) "是" else "否")
-            }        }
+                BeaconRow(label = stringResource(R.string.beacon_wmm_version), value = wmm.version.toString())
+                BeaconRow(
+                    label = stringResource(R.string.beacon_uapsd),
+                    value = if (wmm.uApsd) stringResource(R.string.beacon_mfp_capable)
+                    else stringResource(R.string.beacon_mfp_unsupported)
+                )
+                BeaconRow(
+                    label = stringResource(R.string.beacon_parameterized),
+                    value = if (wmm.parameterized) stringResource(R.string.yes) else stringResource(R.string.no)
+                )
+            }
+        }
 
         // Extended Capabilities
         ExpandableDetailSection(
-            title = "Extended Capabilities"
+            title = stringResource(R.string.beacon_ext_cap_title)
         ) {
             RawDataText(
                 beacon.extendedCapabilities,
-                "扩展能力原始数据"
+                stringResource(R.string.beacon_ext_cap_raw)
             )
         }
 
         // Power Envelope
         ExpandableDetailSection(
-            title = "Transmit Power Envelope"
+            title = stringResource(R.string.beacon_power_envelope_title)
         ) {
             RawDataText(
                 beacon.powerEnvelope,
-                "发射功率原始数据"
+                stringResource(R.string.beacon_power_envelope_raw)
             )
         }
 
         // Mobility Domain
         ExpandableDetailSection(
-            title = "Mobility Domain / 802.11r"
+            title = stringResource(R.string.beacon_mobility_title)
         ) {
             RawDataText(
                 beacon.mobilityDomain,
-                "Mobility Domain 原始数据"
+                stringResource(R.string.beacon_mobility_raw)
             )
         }
 
         // Vendor IE
         ExpandableDetailSection(
-            title = "Vendor Specific / 厂商信息"
+            title = stringResource(R.string.beacon_vendor_title)
         ) {
             if (beacon.vendorIes.isEmpty()) {
-                Text("没有厂商 IE")
+                Text(stringResource(R.string.beacon_vendor_unavailable))
             } else {
                 beacon.vendorIes.forEachIndexed { index, vendor ->
                     Column(modifier = Modifier.padding(vertical = 4.dp)) {
                         BeaconRow(
-                            "厂商 IE ${index + 1}",
+                            stringResource(R.string.beacon_vendor_index, index + 1),
                             vendor.oui
                         )
 
                         vendor.vendorType?.let {
-                            BeaconRow("Vendor Type", it.toString())
+                            BeaconRow(stringResource(R.string.beacon_vendor_type), it.toString())
                         }
 
-                        RawDataText(vendor.data, "Vendor IE 数据")
+                        RawDataText(vendor.data, stringResource(R.string.beacon_vendor_data))
                     }
                 }
             }
@@ -346,48 +366,48 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
 
         // RNR
         ExpandableDetailSection(
-            title = "RNR / Reduced Neighbor Report"
+            title = stringResource(R.string.beacon_rnr_title)
         ) {
             if (beacon.rnr.isEmpty()) {
-                Text("没有 RNR 信息")
+                Text(stringResource(R.string.beacon_rnr_unavailable))
             } else {
                 beacon.rnr.forEachIndexed { index, data ->
-                    RawDataText(data, "RNR ${index + 1}")
+                    RawDataText(data, stringResource(R.string.beacon_rnr_index, index + 1))
                 }
             }
         }
 
         // Multiple BSSID
         ExpandableDetailSection(
-            title = "Multiple BSSID"
+            title = stringResource(R.string.beacon_mbssid_title)
         ) {
             if (beacon.multipleBssid.isEmpty()) {
-                Text("没有 Multiple BSSID 信息")
+                Text(stringResource(R.string.beacon_mbssid_unavailable))
             } else {
                 beacon.multipleBssid.forEachIndexed { index, data ->
-                    RawDataText(data, "Multiple BSSID ${index + 1}")
+                    RawDataText(data, stringResource(R.string.beacon_mbssid_index, index + 1))
                 }
             }
         }
 
         // All raw IEs
         ExpandableDetailSection(
-            title = "Raw Information Elements / 全部原始 IE"
+            title = stringResource(R.string.beacon_raw_title)
         ) {
             if (beacon.rawIes.isEmpty()) {
-                Text("没有原始 IE 数据")
+                Text(stringResource(R.string.beacon_raw_unavailable))
             } else {
                 beacon.rawIes.forEachIndexed { index, ie ->
                     Column(
                         modifier = Modifier.padding(vertical = 6.dp)
                     ) {
                         BeaconRow(
-                            "IE ${index + 1}",
-                            "ID=${ie.id}" +
-                                    (ie.idExt?.let { "，Extension ID=$it" } ?: "")
+                            stringResource(R.string.beacon_ie_index, index + 1),
+                            stringResource(R.string.beacon_ie_id, ie.id) +
+                                    (ie.idExt?.let { stringResource(R.string.beacon_ie_ext_id, it) } ?: "")
                         )
 
-                        RawDataText(ie.data, "Body")
+                        RawDataText(ie.data, stringResource(R.string.beacon_ie_body))
                     }
                 }
             }
@@ -395,10 +415,10 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
 
         // Warnings
         ExpandableDetailSection(
-            title = "Parser Warnings / 解析警告"
+            title = stringResource(R.string.beacon_warnings_title)
         ) {
             if (beacon.parseWarnings.isEmpty()) {
-                Text("没有解析错误")
+                Text(stringResource(R.string.beacon_no_warnings))
             } else {
                 beacon.parseWarnings.forEachIndexed { index, warning ->
                     Text(

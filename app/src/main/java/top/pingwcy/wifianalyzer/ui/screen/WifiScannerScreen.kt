@@ -92,8 +92,12 @@ fun WifiScannerScreen(
             Manifest.permission.ACCESS_FINE_LOCATION
     )
 
-    LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let {
+    val errorMessage = uiState.errorResId?.let { resId ->
+        uiState.errorArg?.let { stringResource(resId, it) } ?: stringResource(resId)
+    }
+
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
         }
     }

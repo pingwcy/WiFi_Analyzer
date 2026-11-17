@@ -78,13 +78,13 @@ fun ChannelAnalysisScreen(
                 title = { Text(stringResource(R.string.channel_analysis_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.btn_back))
                     }
                 },
                 actions = {
                     // 三个点按钮
                     IconButton(onClick = { showMenu = !showMenu }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "更多")
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.menu_more))
                     }
                     // 下拉菜单（千万注意大括号的位置）
                     DropdownMenu(
