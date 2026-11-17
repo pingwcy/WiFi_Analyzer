@@ -24,7 +24,7 @@ object Routes {
 fun WifiScannerApp(
     navController: NavHostController = rememberNavController()
 ) {
-    val viewModel: WifiViewModel = viewModel()
+    val viewModel: WifiViewModel = viewModel(factory = WifiViewModel.Factory)
     val uiState by viewModel.uiState.collectAsState()
 
     NavHost(

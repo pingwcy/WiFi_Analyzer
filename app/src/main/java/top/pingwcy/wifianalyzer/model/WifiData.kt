@@ -5,7 +5,7 @@ data class WifiData(
         val bssid: String,
         val frequency: Int,          // 主信道频率 MHz
         val rssi: Int,               // 信号强度 dBm
-        val channelWidth: Int,       // 信道宽度枚举值（WifiManager.CHANNEL_WIDTH_*），非 MHz
+        val channelWidth: ChannelWidth,  // 信道宽度
         val centerFreq0: Int,        // 中心频率 0（MHz），0 表示无
         val centerFreq1: Int,        // 中心频率 1（MHz），0 表示无
         val primaryChannel: Int,     // 主信道号

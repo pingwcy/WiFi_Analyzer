@@ -5,6 +5,7 @@ import android.net.wifi.ScanResult
 import android.os.Build
 import top.pingwcy.wifianalyzer.domain.ChannelCalculator
 import top.pingwcy.wifianalyzer.domain.WifiStandards
+import top.pingwcy.wifianalyzer.model.ChannelWidth
 import top.pingwcy.wifianalyzer.model.WifiData
 import java.nio.ByteOrder
 import top.pingwcy.wifianalyzer.model.BssLoad
@@ -57,7 +58,7 @@ private fun ScanResult.getBssLoad(): BssLoad? {
 @SuppressLint("MissingPermission")
 fun ScanResult.toWifiData(): WifiData {
     val freq = this.frequency
-    val chWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) this.channelWidth else 0
+    val chWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) this.channelWidth else ScanResult.CHANNEL_WIDTH_20MHZ
     val cf0 = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) this.centerFreq0 else 0
     val cf1 = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) this.centerFreq1 else 0
     val beacon = if (
@@ -72,7 +73,7 @@ fun ScanResult.toWifiData(): WifiData {
         bssid = this.BSSID ?: "",
         frequency = freq,
         rssi = this.level,
-        channelWidth = chWidth,
+        channelWidth = chWidth.toChannelWidth(),
         centerFreq0 = cf0,
         centerFreq1 = cf1,
         primaryChannel = ChannelCalculator.freqToChannel(freq),
@@ -86,6 +87,14 @@ fun ScanResult.toWifiData(): WifiData {
         bssLoad = this.getBssLoad(),
         beaconInfo = beacon
     )
+}
+
+private fun Int.toChannelWidth(): ChannelWidth = when (this) {
+    ScanResult.CHANNEL_WIDTH_40MHZ -> ChannelWidth.WIDTH_40MHZ
+    ScanResult.CHANNEL_WIDTH_80MHZ -> ChannelWidth.WIDTH_80MHZ
+    ScanResult.CHANNEL_WIDTH_160MHZ -> ChannelWidth.WIDTH_160MHZ
+    ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ -> ChannelWidth.WIDTH_80MHZ_PLUS
+    else -> ChannelWidth.WIDTH_20MHZ
 }
 
 private fun ScanResult.getCountryCode(): String {

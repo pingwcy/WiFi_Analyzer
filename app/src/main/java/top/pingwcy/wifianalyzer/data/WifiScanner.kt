@@ -9,17 +9,18 @@ import android.net.wifi.WifiManager
 import android.os.SystemClock
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
+import top.pingwcy.wifianalyzer.domain.WifiRepository
 import top.pingwcy.wifianalyzer.model.WifiData
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 
-class WifiScanner(private val context: Context) {
+class WifiScanner(private val context: Context) : WifiRepository {
 
     private val wifiManager =
         context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
     @SuppressLint("MissingPermission")
-    suspend fun scan(timeoutMs: Long = 5000): List<WifiData> {
+    override suspend fun scan(timeoutMs: Long): List<WifiData> {
         // 扫描前快照：BSSID -> timestamp，用于差集判断"本次新结果"
         val beforeSnapshot: Map<String, Long> =
             wifiManager.scanResults.associate { it.BSSID to it.timestamp }

@@ -12,7 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.R
-import top.pingwcy.wifianalyzer.model.ChannelUsage
+import top.pingwcy.wifianalyzer.domain.ChannelUsage
 import top.pingwcy.wifianalyzer.domain.Grade
 @Composable
 fun ChannelScoreDialog(

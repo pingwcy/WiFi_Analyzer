@@ -1,9 +1,6 @@
 package top.pingwcy.wifianalyzer.domain
 
 import top.pingwcy.wifianalyzer.model.WifiData
-import top.pingwcy.wifianalyzer.model.ChannelUsage
-import top.pingwcy.wifianalyzer.domain.ChannelScorer
-
 
 object ChannelAnalyzer {
 
@@ -18,13 +15,18 @@ object ChannelAnalyzer {
         val filtered = (if (band == null) list else list.filter { it.band == band })
             .filter { !ignoreWeak || it.rssi >= weakThreshold }
 
-        val map = mutableMapOf<Int, MutableList<WifiData>>()
+        // channel -> 该信道受到的加权贡献（一个 AP 最多对同一信道贡献一条记录）
+        val map = mutableMapOf<Int, MutableList<WeightedWifi>>()
         filtered.forEach { wifi ->
-            val channels = if (useOccupied)
-                ChannelCalculator.occupiedChannels(wifi)
-            else listOf(wifi.primaryChannel)
-            channels.filter { it > 0 }.distinct().forEach { ch ->
-                map.getOrPut(ch) { mutableListOf() }.add(wifi)
+            val contributions: Map<Int, Double> = if (useOccupied) {
+                ChannelCalculator.interferenceWeights(wifi)
+            } else {
+                mapOf(wifi.primaryChannel to 1.0)
+            }
+            contributions.forEach { (ch, weight) ->
+                if (ch > 0 && weight > 0.0) {
+                    map.getOrPut(ch) { mutableListOf() }.add(WeightedWifi(wifi, weight))
+                }
             }
         }
 
@@ -40,7 +42,8 @@ object ChannelAnalyzer {
                 ChannelUsage(
                     channel = ch,
                     count = list.size,
-                    networks = list.map { it.ssid },
+                    load = list.sumOf { it.weight },
+                    networks = list.map { it.wifi.ssid },
                     score = ChannelScorer.scoreChannel(ch, list)
                 )
             }

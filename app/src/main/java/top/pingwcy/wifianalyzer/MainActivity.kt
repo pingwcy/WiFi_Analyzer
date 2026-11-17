@@ -4,12 +4,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.*
 import top.pingwcy.wifianalyzer.ui.WifiScannerApp
+import top.pingwcy.wifianalyzer.ui.theme.WiFiAnalyzerTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            WiFiAnalyzerTheme {
                 WifiScannerApp()
             }
         }

@@ -24,7 +24,7 @@ import top.pingwcy.wifianalyzer.ui.component.ChannelBarRow
 import android.util.Log
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import top.pingwcy.wifianalyzer.model.ChannelUsage
+import top.pingwcy.wifianalyzer.domain.ChannelUsage
 import  top.pingwcy.wifianalyzer.ui.component.ChannelScoreDialog
 import androidx.compose.ui.res.stringResource
 import top.pingwcy.wifianalyzer.R
@@ -57,7 +57,7 @@ fun ChannelAnalysisScreen(
             weakThreshold = weakThreshold
         )
     }
-    val maxCount = usage.maxOfOrNull { it.count } ?: 1
+    val maxLoad = usage.maxOfOrNull { it.load }?.takeIf { it > 0 } ?: 1.0
     val bandOptions = listOf(
         null to R.string.band_all,
         "2.4 GHz" to R.string.band_2g_short,
@@ -191,7 +191,7 @@ fun ChannelAnalysisScreen(
                 items(usage) { item ->
                     ChannelBarRow(
                         item = item,
-                        maxCount = maxCount,
+                        maxLoad = maxLoad,
                         onClick = {selectedChannel = item }
                     )
                 }

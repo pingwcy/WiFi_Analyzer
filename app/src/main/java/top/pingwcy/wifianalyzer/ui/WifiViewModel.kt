@@ -1,16 +1,20 @@
 package top.pingwcy.wifianalyzer.ui
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import top.pingwcy.wifianalyzer.data.WifiScanner
+import top.pingwcy.wifianalyzer.domain.WifiRepository
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.model.BandFilter
 import top.pingwcy.wifianalyzer.model.groupKey
+
 /** 排序/视图模式 */
 enum class SortMode {
     GROUPED,   // 按 SSID 聚合，组间按组内最强 rssi 降序
@@ -26,7 +30,10 @@ data class WifiUiState(
     val sortMode: SortMode = SortMode.GROUPED     // 默认聚合视图
 )
 
-class WifiViewModel : ViewModel() {
+class WifiViewModel(
+    private val repository: WifiRepository
+) : ViewModel() {
+
     private val _uiState = MutableStateFlow(WifiUiState())
     val uiState: StateFlow<WifiUiState> = _uiState.asStateFlow()
 
@@ -45,12 +52,12 @@ class WifiViewModel : ViewModel() {
         )
     }
 
-    fun scan(context: Context) {
+    fun scan() {
         if (_uiState.value.isScanning) return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isScanning = true, errorMessage = null)
             try {
-                val results = WifiScanner(context.applicationContext).scan()
+                val results = repository.scan()
                 _uiState.value = _uiState.value.copy(
                     wifiList = results,
                     isScanning = false,
@@ -69,6 +76,16 @@ class WifiViewModel : ViewModel() {
                     isScanning = false,
                     errorMessage = "扫描失败：${e.message}"
                 )
+            }
+        }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application =
+                    this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]!!
+                WifiViewModel(WifiScanner(application))
             }
         }
     }

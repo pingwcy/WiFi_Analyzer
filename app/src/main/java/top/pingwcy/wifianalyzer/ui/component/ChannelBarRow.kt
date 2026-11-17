@@ -12,15 +12,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import top.pingwcy.wifianalyzer.domain.ChannelScore
-import top.pingwcy.wifianalyzer.model.ChannelUsage
+import top.pingwcy.wifianalyzer.domain.ChannelUsage
 import androidx.compose.ui.res.stringResource
 import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.domain.Grade
+
 @Composable
 fun ChannelBarRow(
     item: ChannelUsage,
-    maxCount: Int,
+    maxLoad: Double,
     onClick: () -> Unit
 ) {
     val s = item.score
@@ -31,6 +31,9 @@ fun ChannelBarRow(
         s.score >= 40 -> Color(0xFFFF9800)
         else -> Color(0xFFF44336)
     }
+    // 条形图高度按等效负载（真实频谱占用）
+    val fraction = ((item.load / maxLoad).toFloat()).coerceIn(0f, 1f).coerceAtLeast(0.02f)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -43,7 +46,7 @@ fun ChannelBarRow(
             fontSize = 13.sp,
             modifier = Modifier.width(56.dp)
         )
-        // 进度条用综合分
+        // 进度条：高度 = 等效负载占比，颜色 = 综合评分
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -52,7 +55,7 @@ fun ChannelBarRow(
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth((s.score / 100f).coerceAtLeast(0.02f))
+                    .fillMaxWidth(fraction)
                     .background(color, RoundedCornerShape(4.dp))
             )
         }
@@ -73,8 +76,8 @@ fun ChannelBarRow(
         }
 
         Text(
-            text = gradeText, //  改成转换后的字符串
-            fontSize = 12.sp, // 截图里可能没显示，估计字号差不多是这个
+            text = gradeText,
+            fontSize = 12.sp,
             color = Color.Gray
         )
     }

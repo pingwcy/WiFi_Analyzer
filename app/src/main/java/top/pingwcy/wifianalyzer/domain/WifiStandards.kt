@@ -1,6 +1,6 @@
 package top.pingwcy.wifianalyzer.domain
 
-import android.net.wifi.ScanResult
+import top.pingwcy.wifianalyzer.model.ChannelWidth
 
 object WifiStandards {
 
@@ -17,31 +17,21 @@ object WifiStandards {
         else -> "未知 ($standard)"
     }
 
-    fun widthText(width: Int): String = when (width) {
-        ScanResult.CHANNEL_WIDTH_20MHZ -> "20 MHz"
-        ScanResult.CHANNEL_WIDTH_40MHZ -> "40 MHz"
-        ScanResult.CHANNEL_WIDTH_80MHZ -> "80 MHz"
-        ScanResult.CHANNEL_WIDTH_160MHZ -> "160 MHz"
-        ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ -> "80+80 MHz"
-        else -> "$width MHz"
+    fun widthText(width: ChannelWidth): String = when (width) {
+        ChannelWidth.WIDTH_20MHZ -> "20 MHz"
+        ChannelWidth.WIDTH_40MHZ -> "40 MHz"
+        ChannelWidth.WIDTH_80MHZ -> "80 MHz"
+        ChannelWidth.WIDTH_160MHZ -> "160 MHz"
+        ChannelWidth.WIDTH_80MHZ_PLUS -> "80+80 MHz"
     }
 
-    fun widthMhz(width: Int): Int = when (width) {
-        ScanResult.CHANNEL_WIDTH_20MHZ -> 20
-        ScanResult.CHANNEL_WIDTH_40MHZ -> 40
-        ScanResult.CHANNEL_WIDTH_80MHZ -> 80
-        ScanResult.CHANNEL_WIDTH_160MHZ -> 160
-        ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ -> 80
-        else -> 0
-    }
+    fun widthMhz(width: ChannelWidth): Int = width.mhz
 
-    fun occupiedChannelCount(width: Int): Int = when (width) {
-        android.net.wifi.ScanResult.CHANNEL_WIDTH_20MHZ -> 1
-        android.net.wifi.ScanResult.CHANNEL_WIDTH_40MHZ -> 2
-        android.net.wifi.ScanResult.CHANNEL_WIDTH_80MHZ -> 4
-        android.net.wifi.ScanResult.CHANNEL_WIDTH_160MHZ -> 8
-        android.net.wifi.ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ -> 8
-        else -> 1
+    fun occupiedChannelCount(width: ChannelWidth): Int = when (width) {
+        ChannelWidth.WIDTH_20MHZ -> 1
+        ChannelWidth.WIDTH_40MHZ -> 2
+        ChannelWidth.WIDTH_80MHZ -> 4
+        ChannelWidth.WIDTH_160MHZ -> 8
+        ChannelWidth.WIDTH_80MHZ_PLUS -> 8
     }
-
 }

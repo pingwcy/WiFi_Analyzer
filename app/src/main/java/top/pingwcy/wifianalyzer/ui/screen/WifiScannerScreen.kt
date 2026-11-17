@@ -103,7 +103,7 @@ fun WifiScannerScreen(
     ) { permissions ->
         val allGranted = permissions.values.all { it }
         if (allGranted) {
-            viewModel.scan(context)
+            viewModel.scan()
         } else {
             Toast.makeText(context, R.string.permission_denied, Toast.LENGTH_SHORT).show()
         }
@@ -183,7 +183,7 @@ fun WifiScannerScreen(
                         ) == PackageManager.PERMISSION_GRANTED
                     }
                     if (allGranted) {
-                        viewModel.scan(context)
+                        viewModel.scan()
                     } else {
                         permissionLauncher.launch(permissionsToRequest)
                     }
