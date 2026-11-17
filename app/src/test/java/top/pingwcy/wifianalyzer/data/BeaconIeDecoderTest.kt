@@ -116,4 +116,96 @@ class BeaconIeDecoderTest {
         )
         assertNull(info.bssLoad)
     }
+
+    @Test
+    fun `解析Rsnxe_版本和能力位`() {
+        // version=1, caps = 0x0009 (bit 0 BSS Transition + bit 3 Beacon Protection)
+        val bytes = byteArrayOf(0x01, 0x00, 0x09, 0x00)
+        val info = BeaconIeDecoder.decode(listOf(IeData(id = 244, idExt = -1, bytes = bytes)))
+
+        assertNotNull(info.rsnxe)
+        assertEquals(1, info.rsnxe!!.version)
+        assertTrue(info.rsnxe!!.capabilities.contains("BSS Transition"))
+        assertTrue(info.rsnxe!!.capabilities.contains("Beacon Protection"))
+    }
+
+    @Test
+    fun `解析ExtendedCapabilities_关键能力位`() {
+        // bit 4 (BSS Transition) + bit 39 (OCV) 置位
+        // bit 4 -> byte 0 bit 4 = 0x10
+        // bit 39 -> byte 4 bit 7 = 0x80
+        val bytes = byteArrayOf(
+            0x10, 0x00, 0x00, 0x00, 0x80.toByte(), 0x00,
+        )
+        val info = BeaconIeDecoder.decode(listOf(IeData(id = 127, idExt = -1, bytes = bytes)))
+
+        assertNotNull(info.extendedCapabilities)
+        assertTrue(info.extendedCapabilities!!.capabilities.contains("BSS Transition"))
+        assertTrue(info.extendedCapabilities!!.capabilities.contains("OCV (Operating Channel Validation)"))
+    }
+
+    @Test
+    fun `解析PowerEnvelope_功率值`() {
+        // max=20dBm(0x28), local=20dBm(0x28), client=18dBm(0x24) category 1
+        val bytes = byteArrayOf(0x28, 0x28, 0x24, 0x01)
+        val info = BeaconIeDecoder.decode(listOf(IeData(id = 195, idExt = -1, bytes = bytes)))
+
+        assertNotNull(info.powerEnvelope)
+        assertEquals(20.0, info.powerEnvelope!!.maxTransmitPowerDbm!!, 0.001)
+        assertEquals(20.0, info.powerEnvelope!!.localMaxTransmitPowerDbm!!, 0.001)
+        assertEquals(1, info.powerEnvelope!!.regulatoryClientInfos.size)
+        assertEquals(18.0, info.powerEnvelope!!.regulatoryClientInfos[0].maxTransmitPowerDbm!!, 0.001)
+        assertEquals(1, info.powerEnvelope!!.regulatoryClientInfos[0].maxTransmitPowerCategory)
+    }
+
+    @Test
+    fun `解析MobilityDomain_MDID和FT能力`() {
+        // MDID = 0x1234, FT = 0x03 (bit0 FT over DS + bit1 RRP)
+        val bytes = byteArrayOf(0x34, 0x12, 0x03)
+        val info = BeaconIeDecoder.decode(listOf(IeData(id = 54, idExt = -1, bytes = bytes)))
+
+        assertNotNull(info.mobilityDomain)
+        assertEquals(0x1234, info.mobilityDomain!!.mdid)
+        assertTrue(info.mobilityDomain!!.fastBssTransitionOverDs)
+        assertTrue(info.mobilityDomain!!.resourceRequestProtocolCapability)
+    }
+
+    @Test
+    fun `解析Rnr_邻居AP信息`() {
+        // header: tbtt offset=0, count=0 (1 个 info)
+        // operating class=131, channel=37
+        // info: tbtt offset=0, bssid=aa:bb:cc:dd:ee:ff, short ssid="test", params=0x01(same ssid), psd=0
+        val bytes = byteArrayOf(
+            0x00,                       // header
+            0x83.toByte(),              // operating class 131
+            0x25,                       // channel 37
+            0x00,                       // neighbor tbtt offset
+            0xAA.toByte(), 0xBB.toByte(), 0xCC.toByte(), 0xDD.toByte(), 0xEE.toByte(), 0xFF.toByte(),
+            't'.code.toByte(), 'e'.code.toByte(), 's'.code.toByte(), 't'.code.toByte(),
+            0x01,                       // params: same ssid
+            0x00,                       // psd
+        )
+
+        val info = BeaconIeDecoder.decode(listOf(IeData(id = 201, idExt = -1, bytes = bytes)))
+
+        assertEquals(1, info.rnr.size)
+        assertEquals("AA:BB:CC:DD:EE:FF", info.rnr[0].bssid)
+        assertEquals("test", info.rnr[0].shortSsid)
+        assertEquals(131, info.rnr[0].operatingClass)
+        assertEquals(37, info.rnr[0].channelNumber)
+        assertTrue(info.rnr[0].sameSsid)
+    }
+
+    @Test
+    fun `解析MultipleBssid_MaxIndicator和Profile`() {
+        // max bssid indicator = 3, subelement 0 len 2 data {0x01, 0x02}
+        val bytes = byteArrayOf(0x03, 0x00, 0x02, 0x01, 0x02)
+        val info = BeaconIeDecoder.decode(listOf(IeData(id = 71, idExt = -1, bytes = bytes)))
+
+        assertEquals(1, info.multipleBssid.size)
+        assertEquals(3, info.multipleBssid[0].maxBssidIndicator)
+        assertEquals(1, info.multipleBssid[0].profiles.size)
+        assertEquals(0, info.multipleBssid[0].profiles[0].subelementId)
+        assertEquals(2, info.multipleBssid[0].profiles[0].data.size)
+    }
 }

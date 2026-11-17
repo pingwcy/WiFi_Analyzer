@@ -277,4 +277,28 @@
     <!-- ===== Recommendation ===== -->
     <string name="recommendation_close">Close recommendation</string>
     <string name="menu_show_recommendation">Show recommendation</string>
+
+    <!-- ===== Beacon IE Human-readable ===== -->
+    <string name="beacon_rsnxe_version">RSNXE Version</string>
+    <string name="beacon_rsnxe_capabilities">RSNXE Capabilities</string>
+    <string name="beacon_no_capabilities">None</string>
+    <string name="beacon_ext_capabilities">Capability Bits</string>
+    <string name="beacon_power_max">Max Transmit Power</string>
+    <string name="beacon_power_local">Local Per-20MHz Power</string>
+    <string name="beacon_power_client">Regulatory Client %1$d</string>
+    <string name="beacon_power_value">%1$s dBm</string>
+    <string name="beacon_power_category">Category %1$s</string>
+    <string name="beacon_power_unavailable">Undefined</string>
+    <string name="beacon_mdid">MDID</string>
+    <string name="beacon_ft_over_ds">Fast BSS Transition (over DS)</string>
+    <string name="beacon_rrp">Resource Request Protocol Capability</string>
+    <string name="beacon_rnr_bssid">BSSID</string>
+    <string name="beacon_rnr_short_ssid">Short SSID</string>
+    <string name="beacon_rnr_channel">Channel %1$d (Class %2$d)</string>
+    <string name="beacon_rnr_tbtt">TBTT offset</string>
+    <string name="beacon_rnr_same_ssid">Same SSID</string>
+    <string name="beacon_rnr_multiple_bssid">Multiple BSSID</string>
+    <string name="beacon_rnr_transmitted">Transmitted BSSID</string>
+    <string name="beacon_mbssid_max_indicator">Max BSSID Indicator</string>
+    <string name="beacon_mbssid_profile">Profile %1$d (Subelement %2$d)</string>
 </resources>

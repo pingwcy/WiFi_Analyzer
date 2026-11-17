@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.model.*
+import java.util.Locale
 
 private fun ByteArray.toHexString(): String? {
     if (isEmpty()) return null
@@ -18,9 +19,6 @@ private fun ByteArray.toHexString(): String? {
         "%02X".format(it.toInt() and 0xFF)
     }
 }
-
-private fun Int.hexString(): String =
-    "0x%04X".format(this)
 
 @Composable
 private fun RawDataText(
@@ -51,6 +49,10 @@ private fun BeaconRow(
 ) {
     DetailRow(label, value)
 }
+
+@Composable
+private fun yesNo(value: Boolean): String =
+    stringResource(if (value) R.string.yes else R.string.no)
 
 @Composable
 fun BeaconInfoSections(beacon: BeaconInfo?) {
@@ -146,6 +148,8 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                         8 -> "SAE"
                         18 -> "OWE"
                         1 -> "802.1X"
+                        5 -> "802.1X-SHA256"
+                        6 -> "PSK-SHA256"
                         else -> "AKM($it)"
                     }
                 }
@@ -163,7 +167,20 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                     }
                 )
             }
-            RawDataText(beacon.rsnxe, stringResource(R.string.beacon_rsnxe_raw))
+
+            // RSNXE
+            val rsnxe = beacon.rsnxe
+            if (rsnxe != null) {
+                BeaconRow(
+                    label = stringResource(R.string.beacon_rsnxe_version),
+                    value = rsnxe.version.toString()
+                )
+                BeaconRow(
+                    label = stringResource(R.string.beacon_rsnxe_capabilities),
+                    value = rsnxe.capabilities.joinToString(", ")
+                        .ifEmpty { stringResource(R.string.beacon_no_capabilities) }
+                )
+            }
         }
 
         // HT
@@ -175,18 +192,28 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
             if (ht == null) {
                 Text(stringResource(R.string.beacon_ht_unavailable))
             } else {
-                BeaconRow(
-                    stringResource(R.string.beacon_ht_capabilities),
-                    ht.capabilities.hexString()
-                )
-
+                BeaconRow("LDPC", yesNo(ht.ldpc))
+                BeaconRow("SGI 20 MHz", yesNo(ht.sgi20))
+                BeaconRow("SGI 40 MHz", yesNo(ht.sgi40))
+                BeaconRow("Greenfield", yesNo(ht.greenfield))
+                BeaconRow("40 MHz", yesNo(ht.fortyMhzSupported))
                 ht.maxAmsduLength?.let {
                     BeaconRow(stringResource(R.string.beacon_max_amsdu), stringResource(R.string.beacon_bytes, it))
                 }
-
-                ht.ampduParameters?.let {
-                    BeaconRow(stringResource(R.string.beacon_ampdu_params), it.hexString())
+                ht.maxAmpduLength?.let {
+                    BeaconRow("Max A-MPDU", stringResource(R.string.beacon_bytes, it))
                 }
+                BeaconRow("STBC RX streams", ht.stbcRxStreams.toString())
+                ht.primaryChannel?.let {
+                    BeaconRow("HT 主信道", it.toString())
+                }
+                ht.secondaryChannelOffset?.let {
+                    BeaconRow("次信道偏移", it.toString())
+                }
+                ht.channelWidth?.let {
+                    BeaconRow(stringResource(R.string.label_channel_width), "$it MHz")
+                }
+                BeaconRow("RIFS 模式", yesNo(ht.rifsMode))
 
                 RawDataText(ht.rxMcsSet, stringResource(R.string.beacon_rx_mcs))
                 RawDataText(ht.operation, stringResource(R.string.beacon_ht_operation))
@@ -202,17 +229,30 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
             if (vht == null) {
                 Text(stringResource(R.string.beacon_vht_unavailable))
             } else {
-                BeaconRow(
-                    stringResource(R.string.beacon_vht_capabilities),
-                    "0x%08X".format(vht.capabilities)
-                )
-
-                vht.rxMcsMap?.let {
-                    BeaconRow(stringResource(R.string.beacon_rx_mcs_map), it.hexString())
+                vht.maxMpduLength?.let {
+                    BeaconRow("Max MPDU", stringResource(R.string.beacon_bytes, it))
                 }
+                vht.supportedChannelWidth?.let {
+                    val text = when (it) {
+                        1 -> "160 MHz"
+                        2 -> "160 MHz + 80+80"
+                        else -> "80 MHz"
+                    }
+                    BeaconRow("支持信道宽度", text)
+                }
+                BeaconRow("RX LDPC", yesNo(vht.rxLdpc))
+                BeaconRow("SGI 80 MHz", yesNo(vht.sgi80))
+                BeaconRow("SGI 160 MHz", yesNo(vht.sgi160))
+                BeaconRow("TX STBC", yesNo(vht.txStbc))
+                BeaconRow("RX STBC", vht.rxStbc.toString())
+                BeaconRow("SU Beamformer", yesNo(vht.suBeamformer))
+                BeaconRow("MU Beamformer", yesNo(vht.muBeamformer))
 
-                vht.txMcsMap?.let {
-                    BeaconRow(stringResource(R.string.beacon_tx_mcs_map), it.hexString())
+                vht.centerFreqSeg0?.let {
+                    BeaconRow("中心频率段 0", "$it")
+                }
+                vht.centerFreqSeg1?.let {
+                    BeaconRow("中心频率段 1", "$it")
                 }
 
                 RawDataText(vht.operation, stringResource(R.string.beacon_vht_operation))
@@ -228,31 +268,17 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
             if (he == null) {
                 Text(stringResource(R.string.beacon_he_unavailable))
             } else {
-                Text(
-                    stringResource(R.string.beacon_he_parser_note),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
-                )
+                BeaconRow("TWT Requester", yesNo(he.twtRequester))
+                BeaconRow("TWT Responder", yesNo(he.twtResponder))
+                BeaconRow("MU EDCA", yesNo(he.muEdca))
+                BeaconRow("OM Control", yesNo(he.omControl))
+                BeaconRow("SU Beamformer", yesNo(he.suBeamformer))
+                BeaconRow("SU Beamformee", yesNo(he.suBeamformee))
+                BeaconRow("MU Beamformer", yesNo(he.muBeamformer))
+                BeaconRow("160 MHz", yesNo(he.channelWidth160))
 
-                RawDataText(
-                    he.macCapabilities,
-                    stringResource(R.string.beacon_he_cap_raw)
-                )
-
-                RawDataText(
-                    he.phyCapabilities,
-                    stringResource(R.string.beacon_he_phy_raw)
-                )
-
-                RawDataText(
-                    he.rxMcsNss,
-                    stringResource(R.string.beacon_he_rx_mcs)
-                )
-
-                RawDataText(
-                    he.operation,
-                    stringResource(R.string.beacon_he_operation)
-                )
+                RawDataText(he.rxMcsNss, stringResource(R.string.beacon_he_rx_mcs))
+                RawDataText(he.operation, stringResource(R.string.beacon_he_operation))
             }
         }
 
@@ -265,26 +291,19 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
             if (eht == null) {
                 Text(stringResource(R.string.beacon_eht_unavailable))
             } else {
-                Text(
-                    stringResource(R.string.beacon_eht_parser_note),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
-                )
+                BeaconRow("EPCS Priority Access", yesNo(eht.epcsPriorityAccess))
+                BeaconRow("EHT OM Control", yesNo(eht.ehtOmControl))
+                BeaconRow("Triggered TXOP Sharing", yesNo(eht.triggeredTxopSharing))
+                BeaconRow("320 MHz", yesNo(eht.support320Mhz))
+                BeaconRow("4096-QAM", yesNo(eht.support4096Qam))
+                eht.channelWidth?.let {
+                    BeaconRow(stringResource(R.string.label_channel_width), "$it MHz")
+                }
+                eht.puncturingBitmap?.let {
+                    BeaconRow("Puncturing bitmap", "0x%04X".format(it))
+                }
 
-                RawDataText(
-                    eht.macCapabilities,
-                    stringResource(R.string.beacon_eht_cap_raw)
-                )
-
-                RawDataText(
-                    eht.phyCapabilities,
-                    stringResource(R.string.beacon_eht_phy_raw)
-                )
-
-                RawDataText(
-                    eht.operation,
-                    stringResource(R.string.beacon_eht_operation)
-                )
+                RawDataText(eht.operation, stringResource(R.string.beacon_eht_operation))
             }
         }
 
@@ -300,12 +319,11 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                 BeaconRow(label = stringResource(R.string.beacon_wmm_version), value = wmm.version.toString())
                 BeaconRow(
                     label = stringResource(R.string.beacon_uapsd),
-                    value = if (wmm.uApsd) stringResource(R.string.beacon_mfp_capable)
-                    else stringResource(R.string.beacon_mfp_unsupported)
+                    value = yesNo(wmm.uApsd)
                 )
                 BeaconRow(
                     label = stringResource(R.string.beacon_parameterized),
-                    value = if (wmm.parameterized) stringResource(R.string.yes) else stringResource(R.string.no)
+                    value = yesNo(wmm.parameterized)
                 )
             }
         }
@@ -314,30 +332,74 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
         ExpandableDetailSection(
             title = stringResource(R.string.beacon_ext_cap_title)
         ) {
-            RawDataText(
-                beacon.extendedCapabilities,
-                stringResource(R.string.beacon_ext_cap_raw)
-            )
+            val extCaps = beacon.extendedCapabilities
+            if (extCaps == null) {
+                Text(stringResource(R.string.beacon_no_capabilities))
+            } else {
+                BeaconRow(
+                    label = stringResource(R.string.beacon_ext_capabilities),
+                    value = extCaps.capabilities.joinToString(", ")
+                        .ifEmpty { stringResource(R.string.beacon_no_capabilities) }
+                )
+                RawDataText(extCaps.raw, stringResource(R.string.beacon_ext_cap_raw))
+            }
         }
 
         // Power Envelope
         ExpandableDetailSection(
             title = stringResource(R.string.beacon_power_envelope_title)
         ) {
-            RawDataText(
-                beacon.powerEnvelope,
-                stringResource(R.string.beacon_power_envelope_raw)
-            )
+            val power = beacon.powerEnvelope
+            if (power == null) {
+                Text(stringResource(R.string.beacon_power_unavailable))
+            } else {
+                val undefined = stringResource(R.string.beacon_power_unavailable)
+                fun fmt(v: Double?): String =
+                    v?.let { String.format(Locale.US, "%.1f", it) } ?: undefined
+
+                BeaconRow(
+                    label = stringResource(R.string.beacon_power_max),
+                    value = stringResource(R.string.beacon_power_value, fmt(power.maxTransmitPowerDbm))
+                )
+                BeaconRow(
+                    label = stringResource(R.string.beacon_power_local),
+                    value = stringResource(R.string.beacon_power_value, fmt(power.localMaxTransmitPowerDbm))
+                )
+
+                power.regulatoryClientInfos.forEachIndexed { index, client ->
+                    val cat = client.maxTransmitPowerCategory?.toString() ?: undefined
+                    BeaconRow(
+                        label = stringResource(R.string.beacon_power_client, index + 1),
+                        value = stringResource(
+                            R.string.beacon_power_value,
+                            fmt(client.maxTransmitPowerDbm)
+                        ) + " · " + stringResource(R.string.beacon_power_category, cat)
+                    )
+                }
+            }
         }
 
         // Mobility Domain
         ExpandableDetailSection(
             title = stringResource(R.string.beacon_mobility_title)
         ) {
-            RawDataText(
-                beacon.mobilityDomain,
-                stringResource(R.string.beacon_mobility_raw)
-            )
+            val md = beacon.mobilityDomain
+            if (md == null) {
+                Text(stringResource(R.string.beacon_unspecified))
+            } else {
+                BeaconRow(
+                    label = stringResource(R.string.beacon_mdid),
+                    value = "0x%04X".format(md.mdid)
+                )
+                BeaconRow(
+                    label = stringResource(R.string.beacon_ft_over_ds),
+                    value = yesNo(md.fastBssTransitionOverDs)
+                )
+                BeaconRow(
+                    label = stringResource(R.string.beacon_rrp),
+                    value = yesNo(md.resourceRequestProtocolCapability)
+                )
+            }
         }
 
         // Vendor IE
@@ -371,8 +433,27 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
             if (beacon.rnr.isEmpty()) {
                 Text(stringResource(R.string.beacon_rnr_unavailable))
             } else {
-                beacon.rnr.forEachIndexed { index, data ->
-                    RawDataText(data, stringResource(R.string.beacon_rnr_index, index + 1))
+                beacon.rnr.forEachIndexed { index, neighbor ->
+                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        BeaconRow(
+                            stringResource(R.string.beacon_rnr_index, index + 1),
+                            neighbor.bssid ?: stringResource(R.string.unknown)
+                        )
+                        neighbor.shortSsid?.let {
+                            BeaconRow(stringResource(R.string.beacon_rnr_short_ssid), it)
+                        }
+                        BeaconRow(
+                            stringResource(R.string.beacon_rnr_channel, neighbor.channelNumber, neighbor.operatingClass),
+                            ""
+                        )
+                        BeaconRow(
+                            stringResource(R.string.beacon_rnr_tbtt),
+                            "${neighbor.tbttOffsetTu} TU"
+                        )
+                        BeaconRow(stringResource(R.string.beacon_rnr_same_ssid), yesNo(neighbor.sameSsid))
+                        BeaconRow(stringResource(R.string.beacon_rnr_multiple_bssid), yesNo(neighbor.multipleBssid))
+                        BeaconRow(stringResource(R.string.beacon_rnr_transmitted), yesNo(neighbor.transmittedBssid))
+                    }
                 }
             }
         }
@@ -384,8 +465,17 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
             if (beacon.multipleBssid.isEmpty()) {
                 Text(stringResource(R.string.beacon_mbssid_unavailable))
             } else {
-                beacon.multipleBssid.forEachIndexed { index, data ->
-                    RawDataText(data, stringResource(R.string.beacon_mbssid_index, index + 1))
+                beacon.multipleBssid.forEach { element ->
+                    BeaconRow(
+                        label = stringResource(R.string.beacon_mbssid_max_indicator),
+                        value = element.maxBssidIndicator.toString()
+                    )
+                    element.profiles.forEachIndexed { index, profile ->
+                        BeaconRow(
+                            label = stringResource(R.string.beacon_mbssid_profile, index + 1, profile.subelementId),
+                            value = ""
+                        )
+                    }
                 }
             }
         }

@@ -290,4 +290,28 @@
     <!-- ===== 推荐信道 ===== -->
     <string name="recommendation_close">关闭推荐</string>
     <string name="menu_show_recommendation">显示推荐信道</string>
+
+    <!-- ===== Beacon IE 可读解析（i18n 补充） ===== -->
+    <string name="beacon_rsnxe_version">RSNXE 版本</string>
+    <string name="beacon_rsnxe_capabilities">RSNXE 能力</string>
+    <string name="beacon_no_capabilities">无</string>
+    <string name="beacon_ext_capabilities">能力位</string>
+    <string name="beacon_power_max">最大发射功率</string>
+    <string name="beacon_power_local">本地每 20MHz 功率</string>
+    <string name="beacon_power_client">监管客户端 %1$d</string>
+    <string name="beacon_power_value">%1$s dBm</string>
+    <string name="beacon_power_category">类别 %1$s</string>
+    <string name="beacon_power_unavailable">未定义</string>
+    <string name="beacon_mdid">MDID</string>
+    <string name="beacon_ft_over_ds">快速 BSS 切换 (FT over DS)</string>
+    <string name="beacon_rrp">资源请求协议能力</string>
+    <string name="beacon_rnr_bssid">BSSID</string>
+    <string name="beacon_rnr_short_ssid">Short SSID</string>
+    <string name="beacon_rnr_channel">信道 %1$d（操作类别 %2$d）</string>
+    <string name="beacon_rnr_tbtt">TBTT offset</string>
+    <string name="beacon_rnr_same_ssid">同 SSID</string>
+    <string name="beacon_rnr_multiple_bssid">Multiple BSSID</string>
+    <string name="beacon_rnr_transmitted">Transmitted BSSID</string>
+    <string name="beacon_mbssid_max_indicator">Max BSSID Indicator</string>
+    <string name="beacon_mbssid_profile">Profile %1$d（子元素 %2$d）</string>
 </resources>

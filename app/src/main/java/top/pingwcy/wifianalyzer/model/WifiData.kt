@@ -30,16 +30,6 @@ data class WifiData(
 enum class CountryCodeState {
         NOT_SUPPORTED, NOT_BROADCAST, INCOMPLETE, INVALID, READ_FAILED, VALID
 }
-data class MultipleBssidInfo(
-        val maxBssidIndicator: Int,
-        val profileCount: Int,
-        val profiles: List<ByteArray>
-)
-
-data class NeighborApInfo(
-        val tbttInformationField: Int,
-        val body: ByteArray
-)
 
 data class BssLoad(
         val stationCount: Int,

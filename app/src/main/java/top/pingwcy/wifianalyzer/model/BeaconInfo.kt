@@ -1,4 +1,3 @@
-
 package top.pingwcy.wifianalyzer.model
 
 data class BeaconInfo(
@@ -8,7 +7,7 @@ data class BeaconInfo(
     // 国家信息
     val country: CountryInfo? = null,
 
-    // 已有的 BSS Load
+    // BSS Load
     val bssLoad: BssLoad? = null,
 
     // 速率
@@ -16,7 +15,7 @@ data class BeaconInfo(
 
     // 安全
     val rsn: RsnInfo? = null,
-    val rsnxe: ByteArray? = null,
+    val rsnxe: RsnxeInfo? = null,
 
     // 802.11n/ac/ax/be
     val ht: HtInfo? = null,
@@ -28,14 +27,14 @@ data class BeaconInfo(
     val wmm: WmmInfo? = null,
 
     // 扩展信息
-    val extendedCapabilities: ByteArray? = null,
-    val powerEnvelope: ByteArray? = null,
-    val mobilityDomain: ByteArray? = null,
+    val extendedCapabilities: ExtendedCapabilitiesInfo? = null,
+    val powerEnvelope: PowerEnvelopeInfo? = null,
+    val mobilityDomain: MobilityDomainInfo? = null,
     val vendorIes: List<VendorIe> = emptyList(),
 
     // 多 BSSID、邻居信息
-    val rnr: List<ByteArray> = emptyList(),
-    val multipleBssid: List<ByteArray> = emptyList(),
+    val rnr: List<RnrNeighborAp> = emptyList(),
+    val multipleBssid: List<MultipleBssidElement> = emptyList(),
 
     // 其他尚未解析的信息
     val parseWarnings: List<String> = emptyList()
@@ -61,7 +60,7 @@ data class CountryInfo(
 data class CountryTriplet(
     val firstChannel: Int,
     val channelCount: Int,
-    val maxPowerDbm: Int? // 加上问号
+    val maxPowerDbm: Int?
 )
 
 data class RsnInfo(
@@ -82,15 +81,68 @@ data class RsnInfo(
     val groupMgmtCipher: String?
 )
 
+/** RSN Extension（元素 244）的解析结果。 */
+data class RsnxeInfo(
+    val version: Int,
+    val capabilities: List<String>,  // 已置位的能力位（人类可读）
+)
+
+/** Extended Capabilities（元素 127）的解析结果。 */
+data class ExtendedCapabilitiesInfo(
+    val capabilities: List<String>,  // 已置位的能力位（人类可读）
+    val raw: ByteArray,
+)
+
+/** Transmit Power Envelope（元素 195）的解析结果。 */
+data class PowerEnvelopeInfo(
+    val maxTransmitPowerDbm: Double?,        // 本地最大发射功率（dBm）
+    val localMaxTransmitPowerDbm: Double?,   // 本地每 20MHz 最大发射功率（dBm）
+    val regulatoryClientInfos: List<RegulatoryClientInfo>,
+)
+
+data class RegulatoryClientInfo(
+    val maxTransmitPowerDbm: Double?,        // 客户端最大发射功率（dBm），0 表示未定义
+    val maxTransmitPowerCategory: Int?,      // 功率类别（0 表示未定义）
+)
+
+/** Mobility Domain（元素 54，802.11r）的解析结果。 */
+data class MobilityDomainInfo(
+    val mdid: Int,
+    val fastBssTransitionOverDs: Boolean,
+    val resourceRequestProtocolCapability: Boolean,
+)
+
+/** Reduced Neighbor Report（元素 201）中的一个邻居 AP。 */
+data class RnrNeighborAp(
+    val tbttOffsetTu: Int,          // TBTT offset（TU）
+    val operatingClass: Int,        // 操作类别
+    val channelNumber: Int,         // 信道号
+    val bssid: String?,             // 邻居 AP 的 BSSID
+    val shortSsid: String?,         // Short-SSID（4 字节，ASCII 或 hex）
+    val sameSsid: Boolean,          // 是否与本 AP 同 SSID
+    val multipleBssid: Boolean,     // 是否属于 Multiple BSSID
+    val transmittedBssid: Boolean,  // 是否为 Transmitted BSSID
+)
+
+/** Multiple BSSID（元素 71）的解析结果。 */
+data class MultipleBssidElement(
+    val maxBssidIndicator: Int,
+    val profiles: List<MultipleBssidProfile>,
+)
+
+data class MultipleBssidProfile(
+    val subelementId: Int,      // 子元素 ID（0 = Non-transmitted BSSID Profile）
+    val data: ByteArray,        // 子元素原始内容
+)
+
 data class HtInfo(
     val capabilities: Int,
     val maxAmsduLength: Int?,
     val ampduParameters: Int?,
     val rxMcsSet: ByteArray?,
     val operation: ByteArray?,
-    // 以下为新增字段
     val htExtendedCapabilities: Int? = null,
-    val txBeamformingCapabilities: Long? = null, // 注意这里是 Long
+    val txBeamformingCapabilities: Long? = null,
     val aselCapability: Int? = null,
     val sgi20: Boolean = false,
     val sgi40: Boolean = false,
@@ -107,11 +159,10 @@ data class HtInfo(
 )
 
 data class VhtInfo(
-    val capabilities: Long, // 注意这里改成 Long，解决 Incompatible types 报错
+    val capabilities: Long,
     val rxMcsMap: Int?,
     val txMcsMap: Int?,
     val operation: ByteArray?,
-    // 以下为新增字段
     val maxMpduLength: Int? = null,
     val supportedChannelWidth: Int? = null,
     val rxLdpc: Boolean = false,
@@ -133,7 +184,6 @@ data class HeInfo(
     val phyCapabilities: ByteArray?,
     val rxMcsNss: ByteArray?,
     val operation: ByteArray?,
-    // 新增
     val heSupported: Boolean = true,
     val twtRequester: Boolean = false,
     val twtResponder: Boolean = false,
@@ -149,7 +199,6 @@ data class EhtInfo(
     val macCapabilities: ByteArray?,
     val phyCapabilities: ByteArray?,
     val operation: ByteArray?,
-    // 新增
     val epcsPriorityAccess: Boolean = false,
     val ehtOmControl: Boolean = false,
     val triggeredTxopSharing: Boolean = false,
@@ -162,10 +211,9 @@ data class EhtInfo(
 data class WmmInfo(
     val version: Int,
     val qosInfo: Int,
-    // 补充下面这些字段
     val uApsd: Boolean = false,
     val parameterized: Boolean = false,
-    val acm: List<String>? = null // 如果之前不是 List<String>，请按原来的类型调整，这里给个安全的默认值
+    val acm: List<String>? = null
 )
 
 data class WmmAcParameter(
