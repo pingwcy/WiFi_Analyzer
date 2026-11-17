@@ -10,6 +10,14 @@ object ChannelCalculator {
         for (ch in 100..144 step 4) add(ch)
         for (ch in 149..177 step 4) add(ch)
     }
+    // 160MHz 标准段：每段 8 个 20MHz 子信道
+    private val CH160_SEGMENTS: List<List<Int>> = listOf(
+        listOf(36, 40, 44, 48, 52, 56, 60, 64),      // 中心 5250
+        listOf(100, 104, 108, 112, 116, 120, 124, 128), // 中心 5570
+        listOf(149, 153, 157, 161, 165, 169, 173, 177)  // 中心 5810（少见）
+    )
+    private fun ch160SegmentOf(primaryCh: Int): List<Int>? =
+        CH160_SEGMENTS.firstOrNull { primaryCh in it }
 
     fun freqToChannel(freq: Int): Int = when {
         freq == 2484 -> 14
@@ -36,7 +44,17 @@ object ChannelCalculator {
                     channelsCoveredBy(wifi.centerFreq1, 80)).distinct().sorted()
         }
 
-        // 优先用 centerFreq0（40/80/160 都有）
+        // 160MHz：按标准段直接枚举，不依赖 centerFreq0
+        if (width == 160) {
+            val primaryCh = freqToChannel(wifi.frequency)
+            return ch160SegmentOf(primaryCh) ?: run {
+                // 兜底：主信道不在标准段内，退回通用算法
+                val center = if (wifi.centerFreq0 > 0) wifi.centerFreq0 else wifi.frequency
+                channelsCoveredBy(center, width).distinct().sorted()
+            }
+        }
+
+        // 优先用 centerFreq0（40/80 都有）
         if (wifi.centerFreq0 > 0) {
             return channelsCoveredBy(wifi.centerFreq0, width).distinct().sorted()
         }
