@@ -1,6 +1,18 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+// 读取本地签名配置（项目根目录 keystore.properties，已被 .gitignore 忽略）。
+// 用于本地 release 构建时自动签名；CI 则通过 GitHub Secrets 注入环境变量。
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        FileInputStream(keystorePropertiesFile).use { load(it) }
+    }
 }
 
 android {
@@ -19,8 +31,35 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // 签名信息来源优先级：环境变量（CI）> 本地 keystore.properties > 跳过签名。
+        val envPath = System.getenv("RELEASE_KEYSTORE_PATH")
+        val envPassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+        val envAlias = System.getenv("RELEASE_KEY_ALIAS")
+        val envKeyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+
+        val resolvedStoreFile = envPath ?: keystoreProperties.getProperty("storeFile")
+        val resolvedStorePassword = envPassword ?: keystoreProperties.getProperty("storePassword")
+        val resolvedKeyAlias = envAlias ?: keystoreProperties.getProperty("keyAlias")
+        val resolvedKeyPassword = envKeyPassword ?: keystoreProperties.getProperty("keyPassword")
+
+        if (!resolvedStoreFile.isNullOrBlank() &&
+            !resolvedStorePassword.isNullOrBlank() &&
+            !resolvedKeyAlias.isNullOrBlank() &&
+            !resolvedKeyPassword.isNullOrBlank()
+        ) {
+            create("release") {
+                storeFile = rootProject.file(resolvedStoreFile)
+                storePassword = resolvedStorePassword
+                keyAlias = resolvedKeyAlias
+                keyPassword = resolvedKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             optimization {
                 enable = true
                 isShrinkResources = true

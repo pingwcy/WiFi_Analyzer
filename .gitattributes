@@ -1,0 +1,4 @@
+# 保证 shell 脚本在 Linux CI 上可正常执行（强制 LF 行尾）
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
