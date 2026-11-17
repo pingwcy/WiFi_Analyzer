@@ -256,4 +256,12 @@
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_chinese">中文</string>
     <string name="settings_language_english">English</string>
+
+    <!-- ===== 频谱图 ===== -->
+    <string name="menu_spectrum">频谱图</string>
+    <string name="spectrum_title">频谱分析</string>
+    <string name="spectrum_caption">横轴为连续频率，纵轴为归一化信号强度；曲线按真实中心频率与信道带宽绘制，重叠区域自然叠加。</string>
+    <string name="spectrum_ap_list_title">AP 占用列表（点击高亮）</string>
+    <string name="spectrum_no_ap_hint">当前频段没有扫描到 AP</string>
+    <string name="spectrum_ap_subtitle">CH %1$d · %2$s · %3$d dBm</string>
 </resources>

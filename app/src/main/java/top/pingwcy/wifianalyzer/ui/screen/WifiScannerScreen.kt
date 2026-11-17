@@ -90,6 +90,7 @@ fun WifiScannerScreen(
     onItemClick: (WifiData) -> Unit,
     onOpenChannelAnalysis: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenSpectrum: () -> Unit,
     viewModel: WifiViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -164,6 +165,13 @@ fun WifiScannerScreen(
                             onClick = {
                                 showMenu = false
                                 showChannelInfoDialog = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_spectrum)) },
+                            onClick = {
+                                showMenu = false
+                                onOpenSpectrum()
                             }
                         )
                         DropdownMenuItem(

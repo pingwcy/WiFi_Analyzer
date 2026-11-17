@@ -5,6 +5,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.ui.screen.ChannelAnalysisScreen
 import top.pingwcy.wifianalyzer.ui.screen.SettingsScreen
+import top.pingwcy.wifianalyzer.ui.screen.SpectrumScreen
 import top.pingwcy.wifianalyzer.ui.screen.WifiDetailScreen
 import top.pingwcy.wifianalyzer.ui.screen.WifiScannerScreen
 import androidx.navigation.NavType
@@ -19,6 +20,7 @@ object Routes {
     const val DETAIL = "detail/{wifiId}"   // 详情页带参数
     const val CHANNEL = "channel"
     const val SETTINGS = "settings"
+    const val SPECTRUM = "spectrum"
 
     fun detail(wifiId: String) = "detail/$wifiId"
 }
@@ -45,6 +47,9 @@ fun WifiScannerApp(
                 },
                 onOpenSettings = {
                     navController.navigate(Routes.SETTINGS)
+                },
+                onOpenSpectrum = {
+                    navController.navigate(Routes.SPECTRUM)
                 },
                 viewModel = viewModel
             )
@@ -84,6 +89,14 @@ fun WifiScannerApp(
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 viewModel = viewModel
+            )
+        }
+
+        // ---------- 频谱页 ----------
+        composable(Routes.SPECTRUM) {
+            SpectrumScreen(
+                wifiList = uiState.wifiList,
+                onBack = { navController.popBackStack() }
             )
         }
     }

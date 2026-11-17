@@ -243,4 +243,12 @@
     <string name="settings_language_system">System default</string>
     <string name="settings_language_chinese">中文</string>
     <string name="settings_language_english">English</string>
+
+    <!-- ===== Spectrum ===== -->
+    <string name="menu_spectrum">Spectrum</string>
+    <string name="spectrum_title">Spectrum Analysis</string>
+    <string name="spectrum_caption">X-axis is continuous frequency, Y-axis is normalized signal strength. Curves are drawn from real center frequency and channel width, so overlapping bands stack naturally.</string>
+    <string name="spectrum_ap_list_title">AP List (tap to highlight)</string>
+    <string name="spectrum_no_ap_hint">No AP found in this band</string>
+    <string name="spectrum_ap_subtitle">CH %1$d · %2$s · %3$d dBm</string>
 </resources>
