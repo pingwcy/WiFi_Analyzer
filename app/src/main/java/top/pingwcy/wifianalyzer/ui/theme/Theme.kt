@@ -1,57 +1,92 @@
 package top.pingwcy.wifianalyzer.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = TealPrimary,
+    onPrimary = TealOnPrimary,
+    primaryContainer = TealPrimaryContainer,
+    onPrimaryContainer = TealOnPrimaryContainer,
+    inversePrimary = TealInversePrimary,
+    secondary = TealSecondary,
+    onSecondary = TealOnSecondary,
+    secondaryContainer = TealSecondaryContainer,
+    onSecondaryContainer = TealOnSecondaryContainer,
+    tertiary = TealTertiary,
+    onTertiary = TealOnTertiary,
+    tertiaryContainer = TealTertiaryContainer,
+    onTertiaryContainer = TealOnTertiaryContainer,
+    background = TealBackground,
+    onBackground = TealOnBackground,
+    surface = TealSurface,
+    onSurface = TealOnSurface,
+    surfaceVariant = TealSurfaceVariant,
+    onSurfaceVariant = TealOnSurfaceVariant,
+    surfaceTint = TealPrimary,
+    inverseSurface = TealInverseSurface,
+    inverseOnSurface = TealInverseOnSurface,
+    outline = TealOutline,
+    outlineVariant = TealOutlineVariant,
+    scrim = TealScrim,
+    surfaceBright = TealSurfaceBright,
+    surfaceDim = TealSurfaceDim,
+    surfaceContainer = TealSurfaceContainer,
+    surfaceContainerHigh = TealSurfaceContainerHigh,
+    surfaceContainerHighest = TealSurfaceContainerHighest,
+    surfaceContainerLow = TealSurfaceContainerLow,
+    surfaceContainerLowest = TealSurfaceContainerLowest,
 )
 
+private val DarkColorScheme = darkColorScheme(
+    primary = TealPrimaryDark,
+    onPrimary = TealOnPrimaryDark,
+    primaryContainer = TealPrimaryContainerDark,
+    onPrimaryContainer = TealOnPrimaryContainerDark,
+    inversePrimary = TealInversePrimaryDark,
+    secondary = TealSecondaryDark,
+    onSecondary = TealOnSecondaryDark,
+    secondaryContainer = TealSecondaryContainerDark,
+    onSecondaryContainer = TealOnSecondaryContainerDark,
+    tertiary = TealTertiaryDark,
+    onTertiary = TealOnTertiaryDark,
+    tertiaryContainer = TealTertiaryContainerDark,
+    onTertiaryContainer = TealOnTertiaryContainerDark,
+    background = TealBackgroundDark,
+    onBackground = TealOnBackgroundDark,
+    surface = TealSurfaceDark,
+    onSurface = TealOnSurfaceDark,
+    surfaceVariant = TealSurfaceVariantDark,
+    onSurfaceVariant = TealOnSurfaceVariantDark,
+    surfaceTint = TealPrimaryDark,
+    inverseSurface = TealInverseSurfaceDark,
+    inverseOnSurface = TealInverseOnSurfaceDark,
+    outline = TealOutlineDark,
+    outlineVariant = TealOutlineVariantDark,
+    scrim = TealScrimDark,
+    surfaceBright = TealSurfaceBrightDark,
+    surfaceDim = TealSurfaceDimDark,
+    surfaceContainer = TealSurfaceContainerDark,
+    surfaceContainerHigh = TealSurfaceContainerHighDark,
+    surfaceContainerHighest = TealSurfaceContainerHighestDark,
+    surfaceContainerLow = TealSurfaceContainerLowDark,
+    surfaceContainerLowest = TealSurfaceContainerLowestDark,
+)
+
+/**
+ * WiFi 分析器主题：固定「科技青绿」品牌配色，不随系统壁纸动态变色，
+ * 保证 App 在不同设备上拥有稳定的视觉身份。
+ */
 @Composable
 fun WiFiAnalyzerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
         typography = Typography,
         content = content
     )

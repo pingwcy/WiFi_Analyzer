@@ -1,8 +1,14 @@
 package top.pingwcy.wifianalyzer.ui
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import top.pingwcy.wifianalyzer.R
+import top.pingwcy.wifianalyzer.data.CrashLogger
 import top.pingwcy.wifianalyzer.model.WifiData
+import top.pingwcy.wifianalyzer.ui.component.CrashReportDialog
 import top.pingwcy.wifianalyzer.ui.screen.ChannelAnalysisScreen
 import top.pingwcy.wifianalyzer.ui.screen.SettingsScreen
 import top.pingwcy.wifianalyzer.ui.screen.SpectrumScreen
@@ -28,8 +34,12 @@ object Routes {
 fun WifiScannerApp(
     navController: NavHostController = rememberNavController()
 ) {
+    val context = LocalContext.current
     val viewModel: WifiViewModel = viewModel(factory = WifiViewModel.Factory)
     val uiState by viewModel.uiState.collectAsState()
+
+    // 检测上次是否崩溃，若有则弹窗提示
+    var showCrashDialog by remember { mutableStateOf(CrashLogger.hasCrashReport(context)) }
 
     NavHost(
         navController = navController,
@@ -101,4 +111,30 @@ fun WifiScannerApp(
             )
         }
     }
+
+    if (showCrashDialog) {
+        CrashReportDialog(
+            onShare = {
+                shareCrashReport(context)
+                CrashLogger.clear(context)
+                showCrashDialog = false
+            },
+            onDismiss = {
+                CrashLogger.clear(context)
+                showCrashDialog = false
+            }
+        )
+    }
+}
+
+private fun shareCrashReport(context: Context) {
+    val content = CrashLogger.readCrashReports(context)
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.crash_report_share_subject))
+        putExtra(Intent.EXTRA_TEXT, content)
+    }
+    context.startActivity(
+        Intent.createChooser(intent, context.getString(R.string.crash_report_share_title))
+    )
 }

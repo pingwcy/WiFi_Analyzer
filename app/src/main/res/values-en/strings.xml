@@ -70,7 +70,7 @@
     <string name="value_dbm">%1$d dBm</string>
     <string name="value_mhz">%1$d MHz</string>
     <string name="value_channel_num">%1$d</string> <!-- 如果只要个数字其实可以直接 toString，但为了统一也可以加 -->
-    <string name="value_occupied_channels">%1$s（%2$d Chs）</string>
+    <string name="value_occupied_channels">Channel %1$s (%2$d total)</string>
     <string name="value_channel_utilization">%1$s%% (%2$d/255)</string>
     <!-- 注意：在 XML 中写百分号要转义，用 %% 表示 % -->
     <string name="value_available_capacity">%1$d (32 μs/s)</string>
@@ -301,4 +301,12 @@
     <string name="beacon_rnr_transmitted">Transmitted BSSID</string>
     <string name="beacon_mbssid_max_indicator">Max BSSID Indicator</string>
     <string name="beacon_mbssid_profile">Profile %1$d (Subelement %2$d)</string>
+
+    <!-- ===== Crash Report ===== -->
+    <string name="crash_report_title">Crash detected</string>
+    <string name="crash_report_message">The app crashed during its last run. Share the crash log to help improve it?</string>
+    <string name="crash_report_share">Share log</string>
+    <string name="crash_report_dismiss">Dismiss</string>
+    <string name="crash_report_share_subject">WiFi Analyzer Crash Report</string>
+    <string name="crash_report_share_title">Share Crash Report</string>
 </resources>
