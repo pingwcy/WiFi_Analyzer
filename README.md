@@ -238,4 +238,4 @@ WiFiAnalyzer/
 
 ## 📄 License
 
-暂未指定开源协议。
+本项目采用 [MIT License](LICENSE)。
