@@ -37,6 +37,10 @@
     <string name="band_5g">5 GHz</string>
     <string name="band_6g">6 GHz</string>
     <string name="band_other">其他频段</string>
+    <string name="band_not_supported">当前设备不支持 %1$s 频段</string>
+    <string name="band_not_supported_hint">此能力由设备硬件决定，并非软件不支持。</string>
+    <string name="band_regulatory_unsupported">当前地区/监管域不允许使用 %1$s 频段</string>
+    <string name="band_regulatory_unsupported_hint">设备硬件支持该频段，但受当地法规限制不可用。</string>
 
     <!-- WifiCard 相关 -->
     <string name="wifi_card_frequency">频率: %1$d MHz</string>

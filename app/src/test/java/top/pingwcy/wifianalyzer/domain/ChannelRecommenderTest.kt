@@ -67,4 +67,28 @@ class ChannelRecommenderTest {
         assertEquals(1.0, ch1.load, 0.001)
         assertEquals(1, ch1.apCount)
     }
+
+    @Test
+    fun `可用信道过滤_排除不可用候选`() {
+        val r = ChannelRecommender.recommend(
+            emptyList(),
+            "2.4 GHz",
+            allowedChannels = setOf(1, 6),
+        )
+
+        assertEquals(listOf(1, 6), r.candidates.map { it.channel })
+        assertEquals(1, r.recommended)
+    }
+
+    @Test
+    fun `全部候选不可用_返回空推荐`() {
+        val r = ChannelRecommender.recommend(
+            emptyList(),
+            "2.4 GHz",
+            allowedChannels = setOf(36, 40),
+        )
+
+        assertEquals(0, r.recommended)
+        assertEquals(emptyList<CandidateChannel>(), r.candidates)
+    }
 }

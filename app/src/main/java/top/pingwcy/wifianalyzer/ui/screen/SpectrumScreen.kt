@@ -38,14 +38,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.R
+import top.pingwcy.wifianalyzer.data.AllowedChannelsProvider
+import top.pingwcy.wifianalyzer.data.BandAvailability
+import top.pingwcy.wifianalyzer.data.WifiBandSupport
 import top.pingwcy.wifianalyzer.domain.ApBand
+import top.pingwcy.wifianalyzer.domain.ChannelCalculator
 import top.pingwcy.wifianalyzer.domain.SpectrumAnalyzer
 import top.pingwcy.wifianalyzer.domain.WifiStandards
 import top.pingwcy.wifianalyzer.model.WifiData
+import top.pingwcy.wifianalyzer.ui.component.BandNotSupportedHint
 import top.pingwcy.wifianalyzer.ui.component.ChannelMark
 import top.pingwcy.wifianalyzer.ui.component.SpectrumChart
 
@@ -95,6 +101,13 @@ fun SpectrumScreen(
 ) {
     var band by remember { mutableStateOf("2.4 GHz") }
     var selectedBssid by remember(band) { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val allowedChannelsByBand = remember(context) {
+        AllowedChannelsProvider.allowedChannelsByBand(context)
+            .mapValues { (_, list) -> list.map { it.channel }.toSet() }
+    }
+    val bandAllowedChannels = allowedChannelsByBand[band]?.takeIf { it.isNotEmpty() }
 
     val points = remember(wifiList, band) { SpectrumAnalyzer.analyze(wifiList, band) }
     val apBands = remember(wifiList, band) { SpectrumAnalyzer.apBands(wifiList, band) }
@@ -151,6 +164,18 @@ fun SpectrumScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            when (WifiBandSupport.availability(context, band)) {
+                BandAvailability.HARDWARE_UNSUPPORTED -> {
+                    BandNotSupportedHint(band, regulatoryOnly = false)
+                    return@Column
+                }
+                BandAvailability.REGULATORY_UNSUPPORTED -> {
+                    BandNotSupportedHint(band, regulatoryOnly = true)
+                    return@Column
+                }
+                BandAvailability.SUPPORTED -> Unit
+            }
+
             if (wifiList.isEmpty()) {
                 Text(
                     stringResource(R.string.no_data_hint),
@@ -161,7 +186,10 @@ fun SpectrumScreen(
 
             SpectrumChart(
                 points = points,
-                channelMarks = channelMarksByBand[band].orEmpty(),
+                channelMarks = channelMarksByBand[band].orEmpty().filter { mark ->
+                    bandAllowedChannels == null ||
+                        ChannelCalculator.freqToChannel(mark.frequencyMhz) in bandAllowedChannels
+                },
                 highlightedSpectrum = highlightedSpectrum,
                 highlightColor = highlightColor ?: MaterialTheme.colorScheme.primary,
             )

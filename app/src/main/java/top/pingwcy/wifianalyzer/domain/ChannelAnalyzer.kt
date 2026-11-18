@@ -10,7 +10,8 @@ object ChannelAnalyzer {
         useOccupied: Boolean = true,
         showEmpty: Boolean = false,
         ignoreWeak: Boolean = false,
-        weakThreshold: Int = -82
+        weakThreshold: Int = -82,
+        allowedChannelsByBand: Map<String, Set<Int>> = emptyMap()
     ): List<ChannelUsage> {
         val filtered = (if (band == null) list else list.filter { it.band == band })
             .filter { !ignoreWeak || it.rssi >= weakThreshold }
@@ -33,7 +34,13 @@ object ChannelAnalyzer {
         if (showEmpty) {
             val bandsToFill = if (band == null) listOf("2.4 GHz", "5 GHz", "6 GHz") else listOf(band)
             bandsToFill.forEach { b ->
-                allChannelsOfBand(b).forEach { ch -> map.getOrPut(ch) { mutableListOf() } }
+                val allowed = allowedChannelsByBand[b]?.takeIf { it.isNotEmpty() }
+                val channels = if (allowed != null) {
+                    allChannelsOfBand(b).filter { it in allowed }
+                } else {
+                    allChannelsOfBand(b)
+                }
+                channels.forEach { ch -> map.getOrPut(ch) { mutableListOf() } }
             }
         }
 

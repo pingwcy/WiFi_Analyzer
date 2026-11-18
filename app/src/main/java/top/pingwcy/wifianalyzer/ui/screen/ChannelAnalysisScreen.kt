@@ -45,16 +45,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.R
+import top.pingwcy.wifianalyzer.data.AllowedChannelsProvider
+import top.pingwcy.wifianalyzer.data.BandAvailability
+import top.pingwcy.wifianalyzer.data.WifiBandSupport
 import top.pingwcy.wifianalyzer.domain.ChannelAnalyzer
 import top.pingwcy.wifianalyzer.domain.ChannelRecommendation
 import top.pingwcy.wifianalyzer.domain.ChannelRecommender
 import top.pingwcy.wifianalyzer.domain.ChannelUsage
 import top.pingwcy.wifianalyzer.model.WifiData
+import top.pingwcy.wifianalyzer.ui.component.BandNotSupportedHint
 import top.pingwcy.wifianalyzer.ui.component.ChannelBarRow
 import top.pingwcy.wifianalyzer.ui.component.ChannelInfoDialog
 import top.pingwcy.wifianalyzer.ui.component.ChannelScoreDialog
@@ -65,6 +70,11 @@ fun ChannelAnalysisScreen(
     wifiList: List<WifiData>,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val allowedChannelsByBand = remember(context) {
+        AllowedChannelsProvider.allowedChannelsByBand(context)
+            .mapValues { (_, list) -> list.map { it.channel }.toSet() }
+    }
     var band by remember { mutableStateOf<String?>(null) }
     var useOccupied by remember { mutableStateOf(true) }
     var showEmpty by remember { mutableStateOf(false) }
@@ -76,21 +86,22 @@ fun ChannelAnalysisScreen(
     var showRecommendation by remember { mutableStateOf(true) }
 
     // 数据分析
-    val usage = remember(wifiList, band, useOccupied, showEmpty, ignoreWeak, weakThreshold) {
+    val usage = remember(wifiList, band, useOccupied, showEmpty, ignoreWeak, weakThreshold, allowedChannelsByBand) {
         ChannelAnalyzer.analyze(
             list = wifiList,
             band = band,
             useOccupied = useOccupied,
             showEmpty = showEmpty,
             ignoreWeak = ignoreWeak,
-            weakThreshold = weakThreshold
+            weakThreshold = weakThreshold,
+            allowedChannelsByBand = allowedChannelsByBand
         )
     }
     val maxLoad = usage.maxOfOrNull { it.load }?.takeIf { it > 0 } ?: 1.0
 
     // 信道推荐（仅当选中具体频段时显示）
-    val recommendation = remember(wifiList, band) {
-        band?.let { ChannelRecommender.recommend(wifiList, it) }
+    val recommendation = remember(wifiList, band, allowedChannelsByBand) {
+        band?.let { ChannelRecommender.recommend(wifiList, it, allowedChannelsByBand[it]) }
     }
 
     Scaffold(
@@ -161,6 +172,21 @@ fun ChannelAnalysisScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
+
+            val selectedBand = band
+            if (selectedBand != null) {
+                when (WifiBandSupport.availability(context, selectedBand)) {
+                    BandAvailability.HARDWARE_UNSUPPORTED -> {
+                        BandNotSupportedHint(selectedBand, regulatoryOnly = false)
+                        return@Column
+                    }
+                    BandAvailability.REGULATORY_UNSUPPORTED -> {
+                        BandNotSupportedHint(selectedBand, regulatoryOnly = true)
+                        return@Column
+                    }
+                    BandAvailability.SUPPORTED -> Unit
+                }
+            }
 
             // 推荐信道
             if (showRecommendation) {

@@ -29,13 +29,23 @@ object ChannelRecommender {
 
     private val candidateChannels = mapOf(
         "2.4 GHz" to listOf(1, 6, 11),
-        "5 GHz" to listOf(36, 40, 44, 48, 149, 153, 157, 161),
+        "5 GHz" to listOf(36, 40, 44, 48, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165),
         "6 GHz" to listOf(5, 21, 37, 53, 69, 85, 101, 117, 133, 149, 165, 181, 197, 213, 229),
     )
 
-    fun recommend(wifiList: List<WifiData>, band: String): ChannelRecommendation {
+    fun recommend(
+        wifiList: List<WifiData>,
+        band: String,
+        allowedChannels: Set<Int>? = null
+    ): ChannelRecommendation {
         val channels = candidateChannels[band]
+            ?.let { base ->
+                val allowed = allowedChannels?.takeIf { it.isNotEmpty() }
+                if (allowed != null) base.filter { it in allowed } else base
+            }
             ?: return ChannelRecommendation(band, 0, emptyList())
+
+        if (channels.isEmpty()) return ChannelRecommendation(band, 0, emptyList())
 
         val bandWifi = wifiList.filter { it.band == band }
 

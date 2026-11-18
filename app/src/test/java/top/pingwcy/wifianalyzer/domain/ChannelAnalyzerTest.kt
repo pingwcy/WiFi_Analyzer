@@ -145,4 +145,28 @@ class ChannelAnalyzerTest {
         assertEquals((1..233 step 4).toList(), ChannelAnalyzer.allChannelsOfBand("6 GHz"))
         assertEquals(emptyList<Int>(), ChannelAnalyzer.allChannelsOfBand("未知"))
     }
+
+    @Test
+    fun `显示空白信道_按可用信道过滤`() {
+        val result = ChannelAnalyzer.analyze(
+            emptyList(),
+            band = "2.4 GHz",
+            showEmpty = true,
+            allowedChannelsByBand = mapOf("2.4 GHz" to setOf(1, 6, 11)),
+        )
+
+        assertEquals(listOf(1, 6, 11), result.map { it.channel })
+    }
+
+    @Test
+    fun `未知可用信道_回退到全量信道表`() {
+        val result = ChannelAnalyzer.analyze(
+            emptyList(),
+            band = "2.4 GHz",
+            showEmpty = true,
+            allowedChannelsByBand = emptyMap(),
+        )
+
+        assertEquals((1..14).toList(), result.map { it.channel })
+    }
 }

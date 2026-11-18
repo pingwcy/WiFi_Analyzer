@@ -27,6 +27,10 @@
     <string name="band_5g">5 GHz</string>
     <string name="band_6g">6 GHz</string>
     <string name="band_other">Other</string>
+    <string name="band_not_supported">This device does not support the %1$s band</string>
+    <string name="band_not_supported_hint">This capability is determined by device hardware, not the software.</string>
+    <string name="band_regulatory_unsupported">The %1$s band is not allowed in the current region/regulatory domain</string>
+    <string name="band_regulatory_unsupported_hint">The device hardware supports this band, but it is restricted by local regulations.</string>
     <!-- WifiCard 相关 -->
     <string name="wifi_card_frequency">Freq: %1$d MHz</string>
     <string name="wifi_card_signal">Signal: %1$d dBm</string>
