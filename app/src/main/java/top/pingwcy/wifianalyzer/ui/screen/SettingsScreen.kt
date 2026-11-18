@@ -29,6 +29,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,8 +41,9 @@ import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.domain.AppLanguage
 import top.pingwcy.wifianalyzer.domain.ReportGenerator
-import top.pingwcy.wifianalyzer.ui.SortMode
+import top.pingwcy.wifianalyzer.domain.SortMode
 import top.pingwcy.wifianalyzer.ui.WifiViewModel
+import top.pingwcy.wifianalyzer.ui.component.SharePrivacyConfirmDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +54,9 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val activity = LocalActivity.current
     val context = LocalContext.current
+    var showShareConfirm by remember { mutableStateOf(false) }
+    val reportSubject = stringResource(R.string.report_share_subject)
+    val reportTitle = stringResource(R.string.report_share_title)
 
     Scaffold(
         topBar = {
@@ -190,22 +197,30 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(24.dp))
             Button(
-                onClick = {
-                    val report = ReportGenerator.generate(viewModel.uiState.value.wifiList)
-                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.report_share_subject))
-                        putExtra(Intent.EXTRA_TEXT, report)
-                    }
-                    context.startActivity(
-                        Intent.createChooser(sendIntent, context.getString(R.string.report_share_title))
-                    )
-                },
+                onClick = { showShareConfirm = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.settings_export_report))
             }
         }
+    }
+
+    if (showShareConfirm) {
+        SharePrivacyConfirmDialog(
+            onConfirm = {
+                showShareConfirm = false
+                val report = ReportGenerator.generate(viewModel.uiState.value.wifiList)
+                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, reportSubject)
+                    putExtra(Intent.EXTRA_TEXT, report)
+                }
+                context.startActivity(
+                    Intent.createChooser(sendIntent, reportTitle)
+                )
+            },
+            onDismiss = { showShareConfirm = false }
+        )
     }
 }
 

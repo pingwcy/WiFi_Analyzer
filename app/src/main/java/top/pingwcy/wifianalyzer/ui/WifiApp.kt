@@ -4,11 +4,14 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import top.pingwcy.wifianalyzer.R
 import top.pingwcy.wifianalyzer.data.CrashLogger
-import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.ui.component.CrashReportDialog
+import top.pingwcy.wifianalyzer.ui.component.SharePrivacyConfirmDialog
 import top.pingwcy.wifianalyzer.ui.screen.ChannelAnalysisScreen
 import top.pingwcy.wifianalyzer.ui.screen.SettingsScreen
 import top.pingwcy.wifianalyzer.ui.screen.SpectrumScreen
@@ -30,6 +33,7 @@ object Routes {
 
     fun detail(wifiId: String) = "detail/$wifiId"
 }
+@Suppress("DEPRECATION")
 @Composable
 fun WifiScannerApp(
     navController: NavHostController = rememberNavController()
@@ -40,6 +44,21 @@ fun WifiScannerApp(
 
     // 检测上次是否崩溃，若有则弹窗提示
     var showCrashDialog by remember { mutableStateOf(CrashLogger.hasCrashReport(context)) }
+    var showSharePrivacyConfirm by remember { mutableStateOf(false) }
+
+    // 感知前后台：进入后台暂停持续扫描，回到前台按需恢复。
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> viewModel.onAppForeground()
+                Lifecycle.Event.ON_STOP -> viewModel.onAppBackground()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     NavHost(
         navController = navController,
@@ -91,6 +110,8 @@ fun WifiScannerApp(
         composable(Routes.CHANNEL) {
             ChannelAnalysisScreen(
                 wifiList = uiState.wifiList,
+                allowedChannelsByBand = uiState.allowedChannelsByBand,
+                bandAvailabilityByBand = uiState.bandAvailabilityByBand,
                 onBack = { navController.popBackStack() }
             )
         }
@@ -107,6 +128,8 @@ fun WifiScannerApp(
         composable(Routes.SPECTRUM) {
             SpectrumScreen(
                 wifiList = uiState.wifiList,
+                allowedChannelsByBand = uiState.allowedChannelsByBand,
+                bandAvailabilityByBand = uiState.bandAvailabilityByBand,
                 onBack = { navController.popBackStack() }
             )
         }
@@ -114,15 +137,23 @@ fun WifiScannerApp(
 
     if (showCrashDialog) {
         CrashReportDialog(
-            onShare = {
-                shareCrashReport(context)
-                CrashLogger.clear(context)
-                showCrashDialog = false
-            },
+            onShare = { showSharePrivacyConfirm = true },
             onDismiss = {
                 CrashLogger.clear(context)
                 showCrashDialog = false
             }
+        )
+    }
+
+    if (showSharePrivacyConfirm) {
+        SharePrivacyConfirmDialog(
+            onConfirm = {
+                shareCrashReport(context)
+                CrashLogger.clear(context)
+                showCrashDialog = false
+                showSharePrivacyConfirm = false
+            },
+            onDismiss = { showSharePrivacyConfirm = false }
         )
     }
 }

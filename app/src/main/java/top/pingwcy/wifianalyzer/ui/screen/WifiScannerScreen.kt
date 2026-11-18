@@ -49,10 +49,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import top.pingwcy.wifianalyzer.R
+import top.pingwcy.wifianalyzer.domain.SortMode
 import top.pingwcy.wifianalyzer.model.BandFilter
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.model.groupKey
-import top.pingwcy.wifianalyzer.ui.SortMode
 import top.pingwcy.wifianalyzer.ui.WifiViewModel
 import top.pingwcy.wifianalyzer.ui.component.ChannelInfoDialog
 import top.pingwcy.wifianalyzer.ui.component.FilterChipRow

@@ -21,23 +21,16 @@ data class AllowedChannel(
  */
 object AllowedChannelsProvider {
 
-    // WifiManager.getAllowedChannels 的 band 参数取值：
-    // 1 = 2.4GHz，6 = 5GHz（含 DFS），8 = 6GHz
-    private val BANDS = listOf(
-        1 to "2.4 GHz",
-        6 to "5 GHz",
-        8 to "6 GHz",
-    )
-
     fun allowedChannelsByBand(context: Context): Map<String, List<AllowedChannel>> {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return emptyMap()
+        if (!hasNearbyWifiDevicesPermission(context)) return emptyMap()
 
         val wm = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         val result = mutableMapOf<String, List<AllowedChannel>>()
 
-        for ((band, bandName) in BANDS) {
+        for (band in WifiBand.entries) {
             try {
-                val channels = wm.getAllowedChannels(band, WifiAvailableChannel.OP_MODE_STA)
+                val channels = wm.getAllowedChannels(band.allowedChannelsBand, WifiAvailableChannel.OP_MODE_STA)
                     .mapNotNull { wac ->
                         val ch = ChannelCalculator.freqToChannel(wac.frequencyMhz)
                         if (ch > 0) AllowedChannel(wac.frequencyMhz, ch) else null
@@ -45,11 +38,14 @@ object AllowedChannelsProvider {
                     .distinctBy { it.channel }
                     .sortedBy { it.frequencyMhz }
 
-                if (channels.isNotEmpty()) result[bandName] = channels
+                if (channels.isNotEmpty()) result[band.label] = channels
+            } catch (e: UnsupportedOperationException) {
+                // 框架不支持 / 监管域禁用该频段（例如中国大陆 6GHz），跳过。
+                Log.w(TAG, "Unsupported band=${band.label}", e)
             } catch (e: SecurityException) {
                 Log.e(TAG, "Missing NEARBY_WIFI_DEVICES permission", e)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to query allowed channels for band=$band", e)
+                Log.e(TAG, "Failed to query allowed channels for band=${band.label}", e)
             }
         }
 

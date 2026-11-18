@@ -38,22 +38,20 @@ object WifiBandSupport {
 
         // 硬件支持后，再判断监管域是否允许（仅 API 34+ 提供公开 API）。
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            val bandConst = when (band) {
-                "2.4 GHz" -> 1
-                "5 GHz" -> 6
-                "6 GHz" -> 8
-                else -> return BandAvailability.SUPPORTED
-            }
+            val wifiBand = WifiBand.entries.firstOrNull { it.label == band }
+                ?: return BandAvailability.SUPPORTED
+
+            // 权限缺失时无法判断监管域，退化为「按硬件支持判断」，避免误报不支持。
+            if (!hasNearbyWifiDevicesPermission(context)) return BandAvailability.SUPPORTED
 
             return try {
-                val allowed = wm.getAllowedChannels(bandConst, WifiAvailableChannel.OP_MODE_STA)
+                val allowed = wm.getAllowedChannels(wifiBand.allowedChannelsBand, WifiAvailableChannel.OP_MODE_STA)
                 if (allowed.isEmpty()) BandAvailability.REGULATORY_UNSUPPORTED
                 else BandAvailability.SUPPORTED
             } catch (e: UnsupportedOperationException) {
                 // 硬件上报支持，但框架拒绝提供该频段信道（常见于监管域禁用，例如中国大陆 6GHz）。
                 BandAvailability.REGULATORY_UNSUPPORTED
             } catch (e: SecurityException) {
-                // 权限缺失，无法判断监管域，退化为「按硬件支持判断」，避免误报不支持。
                 BandAvailability.SUPPORTED
             } catch (e: Exception) {
                 BandAvailability.SUPPORTED

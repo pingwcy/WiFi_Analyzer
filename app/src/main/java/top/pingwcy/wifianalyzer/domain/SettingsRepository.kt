@@ -18,6 +18,9 @@ interface SettingsRepository {
     /** 是否开启前台持续扫描（默认关闭）。 */
     val continuousScanEnabled: Flow<Boolean>
 
+    /** 默认视图模式（聚合 / 全部列表，默认聚合）。 */
+    val sortMode: Flow<SortMode>
+
     /** 更新自动扫描开关。 */
     suspend fun setAutoScanEnabled(enabled: Boolean)
 
@@ -26,4 +29,7 @@ interface SettingsRepository {
 
     /** 更新持续扫描开关。 */
     suspend fun setContinuousScanEnabled(enabled: Boolean)
+
+    /** 更新默认视图模式。 */
+    suspend fun setSortMode(mode: SortMode)
 }

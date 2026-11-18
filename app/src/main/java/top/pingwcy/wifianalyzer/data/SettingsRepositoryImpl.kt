@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import top.pingwcy.wifianalyzer.domain.AppLanguage
 import top.pingwcy.wifianalyzer.domain.SettingsRepository
+import top.pingwcy.wifianalyzer.domain.SortMode
 
 /**
  * 基于 SharedPreferences 的设置仓库实现。
@@ -28,11 +29,17 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
         prefs.getBoolean(KEY_CONTINUOUS_SCAN_ENABLED, false)
     )
 
+    private val _sortMode = MutableStateFlow(
+        SortMode.fromTag(prefs.getString(KEY_SORT_MODE, null))
+    )
+
     override val autoScanEnabled: Flow<Boolean> = _autoScanEnabled
 
     override val appLanguage: Flow<AppLanguage> = _appLanguage
 
     override val continuousScanEnabled: Flow<Boolean> = _continuousScanEnabled
+
+    override val sortMode: Flow<SortMode> = _sortMode
 
     override suspend fun setAutoScanEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_AUTO_SCAN_ENABLED, enabled).apply()
@@ -47,5 +54,10 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
     override suspend fun setContinuousScanEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_CONTINUOUS_SCAN_ENABLED, enabled).apply()
         _continuousScanEnabled.value = enabled
+    }
+
+    override suspend fun setSortMode(mode: SortMode) {
+        prefs.edit().putString(KEY_SORT_MODE, mode.tag).apply()
+        _sortMode.value = mode
     }
 }

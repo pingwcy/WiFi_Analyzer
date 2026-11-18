@@ -38,14 +38,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.R
-import top.pingwcy.wifianalyzer.data.AllowedChannelsProvider
 import top.pingwcy.wifianalyzer.data.BandAvailability
-import top.pingwcy.wifianalyzer.data.WifiBandSupport
 import top.pingwcy.wifianalyzer.domain.ApBand
 import top.pingwcy.wifianalyzer.domain.ChannelCalculator
 import top.pingwcy.wifianalyzer.domain.SpectrumAnalyzer
@@ -97,16 +94,13 @@ private val apColors = listOf(
 @Composable
 fun SpectrumScreen(
     wifiList: List<WifiData>,
+    allowedChannelsByBand: Map<String, Set<Int>>,
+    bandAvailabilityByBand: Map<String, BandAvailability>,
     onBack: () -> Unit,
 ) {
     var band by remember { mutableStateOf("2.4 GHz") }
     var selectedBssid by remember(band) { mutableStateOf<String?>(null) }
 
-    val context = LocalContext.current
-    val allowedChannelsByBand = remember(context) {
-        AllowedChannelsProvider.allowedChannelsByBand(context)
-            .mapValues { (_, list) -> list.map { it.channel }.toSet() }
-    }
     val bandAllowedChannels = allowedChannelsByBand[band]?.takeIf { it.isNotEmpty() }
 
     val points = remember(wifiList, band) { SpectrumAnalyzer.analyze(wifiList, band) }
@@ -164,7 +158,7 @@ fun SpectrumScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            when (WifiBandSupport.availability(context, band)) {
+            when (bandAvailabilityByBand[band] ?: BandAvailability.SUPPORTED) {
                 BandAvailability.HARDWARE_UNSUPPORTED -> {
                     BandNotSupportedHint(band, regulatoryOnly = false)
                     return@Column

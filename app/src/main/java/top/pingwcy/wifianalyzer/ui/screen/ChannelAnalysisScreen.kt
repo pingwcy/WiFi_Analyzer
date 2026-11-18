@@ -45,15 +45,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.pingwcy.wifianalyzer.R
-import top.pingwcy.wifianalyzer.data.AllowedChannelsProvider
 import top.pingwcy.wifianalyzer.data.BandAvailability
-import top.pingwcy.wifianalyzer.data.WifiBandSupport
 import top.pingwcy.wifianalyzer.domain.ChannelAnalyzer
 import top.pingwcy.wifianalyzer.domain.ChannelRecommendation
 import top.pingwcy.wifianalyzer.domain.ChannelRecommender
@@ -68,13 +65,10 @@ import top.pingwcy.wifianalyzer.ui.component.ChannelScoreDialog
 @Composable
 fun ChannelAnalysisScreen(
     wifiList: List<WifiData>,
-    onBack: () -> Unit
+    allowedChannelsByBand: Map<String, Set<Int>>,
+    bandAvailabilityByBand: Map<String, BandAvailability>,
+    onBack: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val allowedChannelsByBand = remember(context) {
-        AllowedChannelsProvider.allowedChannelsByBand(context)
-            .mapValues { (_, list) -> list.map { it.channel }.toSet() }
-    }
     var band by remember { mutableStateOf<String?>(null) }
     var useOccupied by remember { mutableStateOf(true) }
     var showEmpty by remember { mutableStateOf(false) }
@@ -175,7 +169,7 @@ fun ChannelAnalysisScreen(
 
             val selectedBand = band
             if (selectedBand != null) {
-                when (WifiBandSupport.availability(context, selectedBand)) {
+                when (bandAvailabilityByBand[selectedBand] ?: BandAvailability.SUPPORTED) {
                     BandAvailability.HARDWARE_UNSUPPORTED -> {
                         BandNotSupportedHint(selectedBand, regulatoryOnly = false)
                         return@Column

@@ -313,4 +313,10 @@
     <string name="crash_report_dismiss">Dismiss</string>
     <string name="crash_report_share_subject">WiFi Analyzer Crash Report</string>
     <string name="crash_report_share_title">Share Crash Report</string>
+
+    <!-- ===== Share Privacy Confirm ===== -->
+    <string name="share_privacy_title">Privacy Notice</string>
+    <string name="share_privacy_message">The content you are about to share may include network name (SSID), device address (BSSID), and signal strength that could be used to infer your location. Continue?</string>
+    <string name="share_privacy_confirm">Continue</string>
+    <string name="share_privacy_cancel">Cancel</string>
 </resources>

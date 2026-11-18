@@ -1,33 +1,34 @@
 package top.pingwcy.wifianalyzer.ui
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import top.pingwcy.wifianalyzer.R
+import top.pingwcy.wifianalyzer.data.AllowedChannelsProvider
+import top.pingwcy.wifianalyzer.data.BandAvailability
 import top.pingwcy.wifianalyzer.data.SettingsRepositoryImpl
+import top.pingwcy.wifianalyzer.data.WifiBandSupport
 import top.pingwcy.wifianalyzer.data.WifiScanner
 import top.pingwcy.wifianalyzer.domain.AppLanguage
 import top.pingwcy.wifianalyzer.domain.SettingsRepository
+import top.pingwcy.wifianalyzer.domain.SortMode
 import top.pingwcy.wifianalyzer.domain.WifiRepository
 import top.pingwcy.wifianalyzer.model.BandFilter
 import top.pingwcy.wifianalyzer.model.RssiSample
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.model.groupKey
-
-/** 排序/视图模式 */
-enum class SortMode {
-    GROUPED,   // 按 SSID 聚合，组间按组内最强 rssi 降序
-    FLAT       // 全部展开，纯 rssi 降序
-}
 
 data class WifiUiState(
     val wifiList: List<WifiData> = emptyList(),
@@ -41,9 +42,12 @@ data class WifiUiState(
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val continuousScanEnabled: Boolean = false,  // 默认关闭持续扫描
     val rssiHistory: Map<String, List<RssiSample>> = emptyMap(), // bssid -> 信号历史
+    val allowedChannelsByBand: Map<String, Set<Int>> = emptyMap(), // 频段 -> 监管域允许的信道集合
+    val bandAvailabilityByBand: Map<String, BandAvailability> = emptyMap(), // 频段 -> 可用性
 )
 
 class WifiViewModel(
+    private val appContext: Context,
     private val repository: WifiRepository,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
@@ -76,6 +80,29 @@ class WifiViewModel(
                 if (enabled) startContinuousScan() else stopContinuousScan()
             }
         }
+        viewModelScope.launch {
+            settingsRepository.sortMode.collect { mode ->
+                _uiState.value = _uiState.value.copy(sortMode = mode)
+            }
+        }
+        loadCapabilities()
+    }
+
+    /** 在后台线程加载设备 Wi-Fi 能力（监管域允许信道 + 频段可用性），避免阻塞主线程。 */
+    private fun loadCapabilities() {
+        viewModelScope.launch(Dispatchers.Default) {
+            val allowedChannelsByBand = AllowedChannelsProvider.allowedChannelsByBand(appContext)
+                .mapValues { (_, list) -> list.map { it.channel }.toSet() }
+            val bandAvailabilityByBand = listOf("2.4 GHz", "5 GHz", "6 GHz").associateWith {
+                WifiBandSupport.availability(appContext, it)
+            }
+            _uiState.update {
+                it.copy(
+                    allowedChannelsByBand = allowedChannelsByBand,
+                    bandAvailabilityByBand = bandAvailabilityByBand,
+                )
+            }
+        }
     }
 
     fun setBandFilter(filter: BandFilter) {
@@ -84,6 +111,7 @@ class WifiViewModel(
 
     fun setSortMode(mode: SortMode) {
         _uiState.value = _uiState.value.copy(sortMode = mode)
+        viewModelScope.launch { settingsRepository.setSortMode(mode) }
     }
 
     fun toggleGroup(key: String) {
@@ -107,6 +135,16 @@ class WifiViewModel(
         _uiState.value = _uiState.value.copy(continuousScanEnabled = enabled)
         viewModelScope.launch { settingsRepository.setContinuousScanEnabled(enabled) }
         if (enabled) startContinuousScan() else stopContinuousScan()
+    }
+
+    /** App 回到前台：按需恢复持续扫描。 */
+    fun onAppForeground() {
+        if (_uiState.value.continuousScanEnabled) startContinuousScan()
+    }
+
+    /** App 进入后台：暂停持续扫描以省电。 */
+    fun onAppBackground() {
+        stopContinuousScan()
     }
 
     /**
@@ -194,6 +232,7 @@ class WifiViewModel(
                 val application =
                     this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]!!
                 WifiViewModel(
+                    appContext = application,
                     repository = WifiScanner(application),
                     settingsRepository = SettingsRepositoryImpl(application)
                 )

@@ -326,4 +326,10 @@
     <string name="crash_report_dismiss">忽略</string>
     <string name="crash_report_share_subject">WiFi Analyzer 崩溃日志</string>
     <string name="crash_report_share_title">分享崩溃日志</string>
+
+    <!-- ===== 分享隐私确认 ===== -->
+    <string name="share_privacy_title">隐私提示</string>
+    <string name="share_privacy_message">即将分享的内容可能包含网络名称（SSID）、设备地址（BSSID）及信号强度等可推断位置的信息，请确认是否继续。</string>
+    <string name="share_privacy_confirm">继续分享</string>
+    <string name="share_privacy_cancel">取消</string>
 </resources>

@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.wifi.WifiManager
-import android.os.SystemClock
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import top.pingwcy.wifianalyzer.domain.WifiRepository
@@ -21,14 +20,8 @@ class WifiScanner(private val context: Context) : WifiRepository {
 
     @SuppressLint("MissingPermission")
     override suspend fun scan(timeoutMs: Long): List<WifiData> {
-        // 扫描前快照：BSSID -> timestamp，用于差集判断"本次新结果"
-        val beforeSnapshot: Map<String, Long> =
-            wifiManager.scanResults.associate { it.BSSID to it.timestamp }
-
-        // ScanResult.timestamp 基准是开机后的 elapsedRealtime（微秒）
-        val startRealtimeUs = SystemClock.elapsedRealtime() * 1000
-
-        val gotBroadcast: Boolean = withTimeoutOrNull(timeoutMs) {
+        // 发起扫描并等待「结果可用」广播；startScan 失败或超时都回退到系统缓存的 scanResults。
+        withTimeoutOrNull(timeoutMs) {
             suspendCancellableCoroutine { cont ->
                 val unregistered = AtomicBoolean(false)
 
@@ -36,7 +29,7 @@ class WifiScanner(private val context: Context) : WifiRepository {
                     override fun onReceive(ctx: Context, intent: Intent) {
                         if (intent.action == WifiManager.SCAN_RESULTS_AVAILABLE_ACTION) {
                             if (unregistered.compareAndSet(false, true)) {
-                                runCatching { context.unregisterReceiver(this) } // this = 本接收器
+                                runCatching { ctx.unregisterReceiver(this) }
                             }
                             if (cont.isActive) cont.resume(true)
                         }
@@ -61,23 +54,9 @@ class WifiScanner(private val context: Context) : WifiRepository {
                     if (cont.isActive) cont.resume(false)
                 }
             }
-        } ?: false // 超时视为未拿到本次结果
-
-        val all = wifiManager.scanResults
-
-        // 只有确实收到广播，才认为 scanResults 可能包含本次新结果
-        val fresh = if (gotBroadcast) {
-            all.filter { r ->
-                val prevTs = beforeSnapshot[r.BSSID]
-                // 扫描前没有该 BSSID，或 timestamp 比扫描前更新
-                prevTs == null || r.timestamp > prevTs || r.timestamp >= startRealtimeUs
-            }
-        } else {
-            emptyList()
         }
 
-        // 与原逻辑一致：本次无新结果则回退到全部缓存
-        return (if (fresh.isNotEmpty()) fresh else all)
+        return wifiManager.scanResults
             .map { it.toWifiData() }
             .sortedByDescending { it.rssi }
     }
