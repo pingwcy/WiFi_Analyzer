@@ -63,6 +63,9 @@ private fun powerWidthLabel(index: Int): String = when (index) {
     else -> "CH ${index + 1}"
 }
 
+private fun formatMbps(mbps: Double): String =
+    if (mbps % 1.0 == 0.0) mbps.toInt().toString() else mbps.toString()
+
 @Composable
 fun BeaconInfoSections(beacon: BeaconInfo?) {
     ExpandableDetailSection(
@@ -107,8 +110,19 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                         stringResource(
                             R.string.beacon_country_triplet,
                             triplet.firstChannel,
-                            triplet.channelCount,
+                            triplet.endChannel,
                             power
+                        )
+                    )
+                }
+                country.extensionTriplets.forEachIndexed { index, ext ->
+                    BeaconRow(
+                        stringResource(R.string.beacon_country_ext_index, index + 1),
+                        stringResource(
+                            R.string.beacon_country_ext_triplet,
+                            ext.regulatoryClass,
+                            ext.coverageClass,
+                            ext.maxCoverageMeters
                         )
                     )
                 }
@@ -123,11 +137,12 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                 Text(stringResource(R.string.beacon_no_rates))
             } else {
                 beacon.supportedRates.forEachIndexed { index, rate ->
-                    val rateText = "${rate.mbps} Mbps" +
-                            if (rate.basic) stringResource(R.string.beacon_rate_basic) else ""
+                    val rateText = rate.membershipSelector
+                        ?: "${formatMbps(rate.mbps)} Mbps"
+                    val basicMark = if (rate.basic) stringResource(R.string.beacon_rate_basic) else ""
                     BeaconRow(
                         stringResource(R.string.beacon_rate_index, index + 1),
-                        rateText
+                        rateText + basicMark
                     )
                 }
             }
@@ -156,21 +171,9 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                     value = rsn.pairwiseCiphers.joinToString().ifEmpty { stringResource(R.string.none) }
                 )
 
-                // AKM 名称是协议缩写，保持原文
-                val akmNames = rsn.akmSuites.map {
-                    when (it) {
-                        2 -> "PSK"
-                        8 -> "SAE"
-                        18 -> "OWE"
-                        1 -> "802.1X"
-                        5 -> "802.1X-SHA256"
-                        6 -> "PSK-SHA256"
-                        else -> "AKM($it)"
-                    }
-                }
                 BeaconRow(
                     label = stringResource(R.string.beacon_akm),
-                    value = akmNames.joinToString().ifEmpty { stringResource(R.string.none) }
+                    value = rsn.akmSuites.joinToString().ifEmpty { stringResource(R.string.none) }
                 )
 
                 BeaconRow(
@@ -207,18 +210,46 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
             if (ht == null) {
                 Text(stringResource(R.string.beacon_ht_unavailable))
             } else {
-                BeaconRow("LDPC", yesNo(ht.ldpc))
-                BeaconRow("SGI 20 MHz", yesNo(ht.sgi20))
-                BeaconRow("SGI 40 MHz", yesNo(ht.sgi40))
-                BeaconRow("Greenfield", yesNo(ht.greenfield))
-                BeaconRow("40 MHz", yesNo(ht.fortyMhzSupported))
+                BeaconRow("RX LDPC", yesNo(ht.ldpc))
+                BeaconRow("HT20/HT40", yesNo(ht.fortyMhzSupported))
+                ht.smPowerSave?.let {
+                    val sm = when (it) {
+                        0 -> "Static"
+                        1 -> "Dynamic"
+                        3 -> "Disabled"
+                        else -> "Reserved ($it)"
+                    }
+                    BeaconRow("SM Power Save", sm)
+                }
+                BeaconRow("RX Greenfield", yesNo(ht.greenfield))
+                BeaconRow("RX HT20 SGI", yesNo(ht.sgi20))
+                BeaconRow("RX HT40 SGI", yesNo(ht.sgi40))
+                BeaconRow("TX STBC", yesNo(ht.txStbc))
+                BeaconRow("RX STBC", ht.stbcRxStreams.toString())
+                BeaconRow("HT Delayed Block Ack", yesNo(ht.htDelayedBlockAck))
                 ht.maxAmsduLength?.let {
                     BeaconRow(stringResource(R.string.beacon_max_amsdu), stringResource(R.string.beacon_bytes, it))
                 }
-                ht.maxAmpduLength?.let {
-                    BeaconRow("Max A-MPDU", stringResource(R.string.beacon_bytes, it))
+                BeaconRow("DSSS/CCK HT40", yesNo(ht.dsssCck40MHz))
+                BeaconRow("40 MHz Intolerant", yesNo(ht.fortyMhzIntolerant))
+                BeaconRow("L-SIG TXOP protection", yesNo(ht.lsigTxopProtection))
+                ht.ampduSpacing?.let {
+                    val spacing = when (it) {
+                        0 -> "No restriction"
+                        1 -> "1/4 usec"
+                        2 -> "1/2 usec"
+                        3 -> "1 usec"
+                        4 -> "2 usec"
+                        5 -> "4 usec"
+                        6 -> "8 usec"
+                        7 -> "16 usec"
+                        else -> "Reserved ($it)"
+                    }
+                    BeaconRow("Min RX A-MPDU spacing", spacing)
                 }
-                BeaconRow("STBC RX streams", ht.stbcRxStreams.toString())
+                ht.maxAmpduLength?.let {
+                    BeaconRow("Max RX A-MPDU length", stringResource(R.string.beacon_bytes, it))
+                }
                 ht.rxNss?.let { BeaconRow("Rx NSS", it.toString()) }
                 ht.primaryChannel?.let {
                     BeaconRow("HT 主信道", it.toString())
@@ -250,9 +281,10 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                 }
                 vht.supportedChannelWidth?.let {
                     val text = when (it) {
+                        0 -> "neither 160 nor 80+80"
                         1 -> "160 MHz"
-                        2 -> "160 MHz + 80+80"
-                        else -> "80 MHz"
+                        2 -> "160 MHz, 80+80 MHz"
+                        else -> "(reserved)"
                     }
                     BeaconRow("支持信道宽度", text)
                 }
@@ -262,7 +294,13 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                 BeaconRow("TX STBC", yesNo(vht.txStbc))
                 BeaconRow("RX STBC", vht.rxStbc.toString())
                 BeaconRow("SU Beamformer", yesNo(vht.suBeamformer))
+                BeaconRow("SU Beamformee", yesNo(vht.suBeamformee))
                 BeaconRow("MU Beamformer", yesNo(vht.muBeamformer))
+                BeaconRow("MU Beamformee", yesNo(vht.muBeamformee))
+                BeaconRow("VHT TXOP PS", yesNo(vht.vhtTxopPs))
+                BeaconRow("+HTC-VHT", yesNo(vht.htcVht))
+                BeaconRow("RX antenna pattern consistency", yesNo(vht.rxAntennaPatternConsistency))
+                BeaconRow("TX antenna pattern consistency", yesNo(vht.txAntennaPatternConsistency))
                 vht.rxNss?.let { BeaconRow("Rx NSS", it.toString()) }
                 vht.txNss?.let { BeaconRow("Tx NSS", it.toString()) }
 
@@ -286,14 +324,17 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
             if (he == null) {
                 Text(stringResource(R.string.beacon_he_unavailable))
             } else {
+                BeaconRow("+HTC HE", yesNo(he.htcHeSupported))
                 BeaconRow("TWT Requester", yesNo(he.twtRequester))
                 BeaconRow("TWT Responder", yesNo(he.twtResponder))
-                BeaconRow("MU EDCA", yesNo(he.muEdca))
                 BeaconRow("OM Control", yesNo(he.omControl))
+                BeaconRow("HE40 / 2.4GHz", yesNo(he.he40_2_4GHz))
+                BeaconRow("HE40 / HE80 / 5GHz", yesNo(he.he40_80_5GHz))
+                BeaconRow("HE160 / 5GHz", yesNo(he.he160_5GHz))
+                BeaconRow("HE160 / HE80+80 / 5GHz", yesNo(he.he160_8080_5GHz))
                 BeaconRow("SU Beamformer", yesNo(he.suBeamformer))
                 BeaconRow("SU Beamformee", yesNo(he.suBeamformee))
                 BeaconRow("MU Beamformer", yesNo(he.muBeamformer))
-                BeaconRow("160 MHz", yesNo(he.channelWidth160))
                 he.rxNss?.let { BeaconRow("Rx NSS", it.toString()) }
                 he.txNss?.let { BeaconRow("Tx NSS", it.toString()) }
 
@@ -395,21 +436,6 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                             value = stringResource(R.string.beacon_power_value, fmt(p))
                         )
                     }
-                }
-                BeaconRow(
-                    label = stringResource(R.string.beacon_power_local),
-                    value = stringResource(R.string.beacon_power_value, fmt(power.localMaxTransmitPowerDbm))
-                )
-
-                power.regulatoryClientInfos.forEachIndexed { index, client ->
-                    val cat = client.maxTransmitPowerCategory?.toString() ?: undefined
-                    BeaconRow(
-                        label = stringResource(R.string.beacon_power_client, index + 1),
-                        value = stringResource(
-                            R.string.beacon_power_value,
-                            fmt(client.maxTransmitPowerDbm)
-                        ) + " · " + stringResource(R.string.beacon_power_category, cat)
-                    )
                 }
             }
         }

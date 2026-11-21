@@ -48,7 +48,9 @@ data class RawInformationElement(
 
 data class WifiRate(
     val mbps: Double,
-    val basic: Boolean
+    val basic: Boolean,
+    /** BSS membership selector："HT" / "VHT"；普通速率时为 null。 */
+    val membershipSelector: String? = null
 )
 
 /** Country IE 中的环境字段（室内/室外）。 */
@@ -61,28 +63,51 @@ enum class CountryEnvironment {
 data class CountryInfo(
     val countryCode: String,
     val environment: CountryEnvironment?,
-    val triplets: List<CountryTriplet>
+    val triplets: List<CountryTriplet>,
+    val extensionTriplets: List<CountryExtensionTriplet> = emptyList()
 )
 
+/** Country IE 的信道/功率 triplet（3 字节）。 */
 data class CountryTriplet(
     val firstChannel: Int,
     val channelCount: Int,
-    val maxPowerDbm: Int?
-)
+    val maxPowerDbm: Int?,  // 有符号 __s8
+) {
+    /**
+     * 结束信道号：2.4GHz 按 1 步进，5/6GHz 按 4 步进（信道间隔 20MHz）。
+     * 与 iw 的 scan.c 逻辑一致。
+     */
+    val endChannel: Int
+        get() = if (firstChannel <= 14) {
+            firstChannel + (channelCount - 1)
+        } else {
+            firstChannel + 4 * (channelCount - 1)
+        }
+}
+
+/** Country IE 的扩展 triplet（Regulatory Extension Identifier >= 201）。 */
+data class CountryExtensionTriplet(
+    val regulatoryClass: Int,
+    val coverageClass: Int,
+) {
+    val maxCoverageMeters: Int get() = coverageClass * 450
+}
 
 data class RsnInfo(
     val version: Int,
     val groupCipher: String,
     val pairwiseCiphers: List<String>,
-    val akmSuites: List<Int>,
+    val akmSuites: List<String>,   // 人类可读的 AKM 名称（已解析 OUI + type）
     val preAuthentication: Boolean,
     val noPairwise: Boolean,
-    val ptksaReplayCounter: Int,
+    val ptksaReplayCounter: Int,   // 实际计数：1/2/4/16
+    val gtkReplayCounter: Int,     // 实际计数：1/2/4/16
     val mfpRequired: Boolean,
     val mfpCapable: Boolean,
-    val gtkNotUsed: Boolean,
-    val sppAmsdu: Boolean,
     val peerKeyEnabled: Boolean,
+    val sppAmsduCapable: Boolean,
+    val sppAmsduRequired: Boolean,
+    val extendedKeyId: Boolean,
     val ocv: Boolean,
     val pmkids: List<ByteArray>,
     val groupMgmtCipher: String?
@@ -100,16 +125,9 @@ data class ExtendedCapabilitiesInfo(
     val raw: ByteArray,
 )
 
-/** Transmit Power Envelope（元素 195）的解析结果。 */
+/** Transmit Power Envelope（元素 195，802.11h）的解析结果。 */
 data class PowerEnvelopeInfo(
     val maxTransmitPowersDbm: List<Double?>, // 各信道宽度最大发射功率（dBm），按 20/40/80/160/80+80 顺序
-    val localMaxTransmitPowerDbm: Double?,   // 本地每 20MHz 最大发射功率（dBm）
-    val regulatoryClientInfos: List<RegulatoryClientInfo>,
-)
-
-data class RegulatoryClientInfo(
-    val maxTransmitPowerDbm: Double?,        // 客户端最大发射功率（dBm），0 表示未定义
-    val maxTransmitPowerCategory: Int?,      // 功率类别（0 表示未定义）
 )
 
 /** Mobility Domain（元素 54，802.11r）的解析结果。 */
@@ -151,13 +169,20 @@ data class HtInfo(
     val htExtendedCapabilities: Int? = null,
     val txBeamformingCapabilities: Long? = null,
     val aselCapability: Int? = null,
-    val sgi20: Boolean = false,
-    val sgi40: Boolean = false,
-    val greenfield: Boolean = false,
     val ldpc: Boolean = false,
     val fortyMhzSupported: Boolean = false,
-    val maxAmpduLength: Int? = null,
+    val smPowerSave: Int? = null,       // 0=Static, 1=Dynamic, 3=disabled
+    val greenfield: Boolean = false,
+    val sgi20: Boolean = false,
+    val sgi40: Boolean = false,
+    val txStbc: Boolean = false,
     val stbcRxStreams: Int = 0,
+    val htDelayedBlockAck: Boolean = false,
+    val dsssCck40MHz: Boolean = false,
+    val fortyMhzIntolerant: Boolean = false,
+    val lsigTxopProtection: Boolean = false,
+    val ampduSpacing: Int? = null,      // 0=No restriction .. 7=16usec
+    val maxAmpduLength: Int? = null,
     val rxNss: Int? = null,
     // HT Operation 相关
     val primaryChannel: Int? = null,
@@ -179,7 +204,13 @@ data class VhtInfo(
     val txStbc: Boolean = false,
     val rxStbc: Int = 0,
     val suBeamformer: Boolean = false,
+    val suBeamformee: Boolean = false,
     val muBeamformer: Boolean = false,
+    val muBeamformee: Boolean = false,
+    val vhtTxopPs: Boolean = false,
+    val htcVht: Boolean = false,
+    val rxAntennaPatternConsistency: Boolean = false,
+    val txAntennaPatternConsistency: Boolean = false,
     val rxNss: Int? = null,
     val txNss: Int? = null,
     // VHT Operation 相关
@@ -195,14 +226,17 @@ data class HeInfo(
     val rxMcsNss: ByteArray?,
     val operation: ByteArray?,
     val heSupported: Boolean = true,
+    val htcHeSupported: Boolean = false,
     val twtRequester: Boolean = false,
     val twtResponder: Boolean = false,
-    val muEdca: Boolean = false,
     val omControl: Boolean = false,
+    val he40_2_4GHz: Boolean = false,
+    val he40_80_5GHz: Boolean = false,
+    val he160_5GHz: Boolean = false,
+    val he160_8080_5GHz: Boolean = false,
     val suBeamformer: Boolean = false,
     val suBeamformee: Boolean = false,
     val muBeamformer: Boolean = false,
-    val channelWidth160: Boolean = false,
     val rxNss: Int? = null,
     val txNss: Int? = null
 )

@@ -197,7 +197,7 @@ object BeaconIeDecoder {
             rawIes = raw,
             country = country,
             bssLoad = bssLoad,
-            supportedRates = rates,
+            supportedRates = normalizeRates(rates),
             rsn = rsn,
             rsnxe = rsnxe,
             ht = ht,
@@ -266,44 +266,19 @@ object BeaconIeDecoder {
     private fun parsePowerEnvelope(data: ByteArray): PowerEnvelopeInfo? {
         if (data.size < 2) return null
 
-        // 0.5 dBm 步进；-128 (0x80) 表示未定义
-        fun decodePower(value: Int): Double? {
-            if (value == -128) return null
-            return value / 2.0
+        // 布局（与 iw scan.c 的 print_tx_power_envelope 一致）：
+        //   byte0: bits 0-2 = Maximum Transmit Power Count，bits 3-5 = Unit Interpretation
+        //   byte1..1+count: 各信道宽度（20/40/80/160-80+80 MHz）的最大发射功率，0.5 dBm 步进
+        val count = data[0].toInt() and 0x07
+        val unitInterp = (data[0].toInt() shr 3) and 0x07
+        if (unitInterp != 0) return null  // iw 仅处理 EIRP 解释
+        if (count + 2 != data.size) return null  // iw：长度不符直接放弃
+
+        val powers = (0..count).map { i ->
+            val raw = data[1 + i].toInt()
+            if (raw == -128) null else raw / 2.0
         }
-
-        // 布局：Maximum Transmit Power Count(1) + Maximum Transmit Power(Count)
-        //       + Maximum Transmit Power per 20 MHz(1) + Transmit Power Information(2 字节一组)
-        val count = data[0].toInt() and 0xFF
-        var off = 1
-
-        val maxPowers = mutableListOf<Double?>()
-        var remaining = count
-        while (remaining > 0 && off < data.size) {
-            maxPowers += decodePower(data[off].toInt())
-            off++
-            remaining--
-        }
-
-        val localMaxPower = if (off < data.size) decodePower(data[off].toInt()) else null
-        off++
-
-        val clientInfos = mutableListOf<RegulatoryClientInfo>()
-        while (off + 1 < data.size) {
-            val clientPower = decodePower(data[off].toInt())
-            val category = data[off + 1].toInt() and 0xFF
-            clientInfos += RegulatoryClientInfo(
-                maxTransmitPowerDbm = clientPower,
-                maxTransmitPowerCategory = if (category == 0) null else category,
-            )
-            off += 2
-        }
-
-        return PowerEnvelopeInfo(
-            maxTransmitPowersDbm = maxPowers,
-            localMaxTransmitPowerDbm = localMaxPower,
-            regulatoryClientInfos = clientInfos,
-        )
+        return PowerEnvelopeInfo(maxTransmitPowersDbm = powers)
     }
 
     private fun parseMobilityDomain(data: ByteArray): MobilityDomainInfo? {
@@ -387,25 +362,30 @@ object BeaconIeDecoder {
             val txBf = readU32LE(data, 21)
             val asel = if (data.size >= 28) readU16LE(data, 25) else null
 
-            val maxAmsdu = when ((caps shr 0) and 0x3) {
-                0 -> 3839
-                1 -> 7935
-                else -> null
-            }
-            val maxAmpdu = when ((caps shr 1) and 0x3) {
+            val rxNss = htRxNss(mcs)
+            // 与 iw 的 print_ht_capability 一致（HT Capabilities Info 位域）
+            val ldpc = (caps and 0x0001) != 0                        // bit 0
+            val fortyMhz = (caps and 0x0002) != 0                    // bit 1
+            val smPowerSave = (caps shr 2) and 0x3                   // bits 2-3
+            val htGreenfield = (caps and 0x0010) != 0                // bit 4
+            val sgi20 = (caps and 0x0020) != 0                       // bit 5
+            val sgi40 = (caps and 0x0040) != 0                       // bit 6
+            val txStbc = (caps and 0x0080) != 0                      // bit 7
+            val stbc = (caps shr 8) and 0x3                          // bits 8-9
+            val htDelayedBlockAck = (caps and 0x0400) != 0           // bit 10
+            val maxAmsdu = if ((caps and 0x0800) != 0) 7935 else 3839 // bit 11
+            val dsssCck40MHz = (caps and 0x1000) != 0                // bit 12
+            val fortyMhzIntolerant = (caps and 0x4000) != 0          // bit 14
+            val lsigTxopProtection = (caps and 0x8000.toInt()) != 0  // bit 15
+            // A-MPDU Parameters：exponent 在低 2 位，spacing 在 2-4 位
+            val maxAmpdu = when (ampdu and 0x3) {
                 0 -> 8191
                 1 -> 16383
                 2 -> 32767
                 3 -> 65535
                 else -> null
             }
-            val rxNss = htRxNss(mcs)
-            val sgi20 = (caps and 0x0020) != 0
-            val sgi40 = (caps and 0x0040) != 0
-            val htGreenfield = (caps and 0x0010) != 0
-            val ldpc = (caps and 0x0002) != 0
-            val fortyMhz = (caps and 0x0400) != 0
-            val stbc = ((caps shr 5) and 0x3)
+            val ampduSpacing = (ampdu shr 2) and 0x7
 
             return HtInfo(
                 capabilities = caps,
@@ -416,11 +396,19 @@ object BeaconIeDecoder {
                 htExtendedCapabilities = htExt,
                 txBeamformingCapabilities = txBf?.toLong(),
                 aselCapability = asel,
-                sgi20 = sgi20, sgi40 = sgi40,
-                greenfield = htGreenfield, ldpc = ldpc,
+                ldpc = ldpc,
                 fortyMhzSupported = fortyMhz,
-                maxAmpduLength = maxAmpdu,
+                smPowerSave = smPowerSave,
+                greenfield = htGreenfield,
+                sgi20 = sgi20, sgi40 = sgi40,
+                txStbc = txStbc,
                 stbcRxStreams = stbc,
+                htDelayedBlockAck = htDelayedBlockAck,
+                dsssCck40MHz = dsssCck40MHz,
+                fortyMhzIntolerant = fortyMhzIntolerant,
+                lsigTxopProtection = lsigTxopProtection,
+                ampduSpacing = ampduSpacing,
+                maxAmpduLength = maxAmpdu,
                 rxNss = rxNss
             )
         }
@@ -452,8 +440,9 @@ object BeaconIeDecoder {
             val cap = readU32LE(data, 0)?.toLong() ?: 0L
             val rxMcs = readU16LE(data, 4)
             val txMcs = readU16LE(data, 8)
+            // 802.11ac Maximum MPDU Length：0=3895, 1=7991, 2=11454, 3=11454
             val maxMpdu = when ((cap shr 0) and 0x3) {
-                0L -> 7991; 1L -> 11454; 2L -> 11454; else -> null
+                0L -> 3895; 1L -> 7991; 2L -> 11454; 3L -> 11454; else -> null
             }
             val chanWidth = (cap shr 2) and 0x3
             val rxLdpc = (cap and 0x10L) != 0L
@@ -462,7 +451,13 @@ object BeaconIeDecoder {
             val txStbc = (cap and 0x80L) != 0L
             val rxStbc = ((cap shr 8) and 0x7).toInt()
             val suBeamformer = (cap and 0x0800L) != 0L
-            val muBeamformer = (cap and 0x10000L) != 0L
+            val suBeamformee = (cap and 0x1000L) != 0L
+            val muBeamformer = (cap and 0x80000L) != 0L
+            val muBeamformee = (cap and 0x100000L) != 0L
+            val vhtTxopPs = (cap and 0x200000L) != 0L
+            val htcVht = (cap and 0x400000L) != 0L
+            val rxAntennaPatternConsistency = (cap and 0x10000000L) != 0L
+            val txAntennaPatternConsistency = (cap and 0x20000000L) != 0L
             return VhtInfo(
                 capabilities = cap,
                 rxMcsMap = rxMcs,
@@ -473,7 +468,13 @@ object BeaconIeDecoder {
                 rxLdpc = rxLdpc, sgi80 = sgi80, sgi160 = sgi160,
                 txStbc = txStbc, rxStbc = rxStbc,
                 suBeamformer = suBeamformer,
+                suBeamformee = suBeamformee,
                 muBeamformer = muBeamformer,
+                muBeamformee = muBeamformee,
+                vhtTxopPs = vhtTxopPs,
+                htcVht = htcVht,
+                rxAntennaPatternConsistency = rxAntennaPatternConsistency,
+                txAntennaPatternConsistency = txAntennaPatternConsistency,
                 rxNss = rxMcs?.let { countNss(it) },
                 txNss = txMcs?.let { countNss(it) }
             )
@@ -514,14 +515,18 @@ object BeaconIeDecoder {
                 rxMcsNss = mcs,
                 operation = existing?.operation,
                 heSupported = true,
-                twtRequester = (mac[0].toInt() and 0x01) != 0,
-                twtResponder = (mac[0].toInt() and 0x02) != 0,
-                muEdca = (mac[2].toInt() and 0x80) != 0,
-                omControl = (mac[3].toInt() and 0x40) != 0,
-                suBeamformer = (phy[0].toInt() and 0x01) != 0,
-                suBeamformee = (phy[0].toInt() and 0x02) != 0,
-                muBeamformer = (phy[0].toInt() and 0x04) != 0,
-                channelWidth160 = (phy[1].toInt() and 0x80) != 0,
+                // 与 iw 的 __print_he_capa 一致
+                htcHeSupported = (mac[0].toInt() and 0x01) != 0,
+                twtRequester = (mac[0].toInt() and 0x02) != 0,
+                twtResponder = (mac[0].toInt() and 0x04) != 0,
+                omControl = (mac[3].toInt() and 0x02) != 0,
+                he40_2_4GHz = (phy[1].toInt() and 0x02) != 0,
+                he40_80_5GHz = (phy[1].toInt() and 0x04) != 0,
+                he160_5GHz = (phy[1].toInt() and 0x08) != 0,
+                he160_8080_5GHz = (phy[1].toInt() and 0x10) != 0,
+                suBeamformer = (phy[4].toInt() and 0x80) != 0,
+                suBeamformee = (phy[5].toInt() and 0x01) != 0,
+                muBeamformer = (phy[5].toInt() and 0x02) != 0,
                 rxNss = rxMcs?.let { countNss(it) },
                 txNss = txMcs?.let { countNss(it) }
             )
@@ -572,28 +577,35 @@ object BeaconIeDecoder {
         val environment = when (envByte) {
             'I'.code -> CountryEnvironment.INDOOR
             'O'.code -> CountryEnvironment.OUTDOOR
-            'X'.code -> CountryEnvironment.INDOOR_OUTDOOR
-            else -> null // ' '（空格）、0x00 等均视为未指定
+            ' '.code -> CountryEnvironment.INDOOR_OUTDOOR  // 与 iw country_env_str 一致：空格=Indoor/Outdoor
+            else -> null
         }
 
         val triplets = mutableListOf<CountryTriplet>()
+        val extensionTriplets = mutableListOf<CountryExtensionTriplet>()
         var off = 3
         while (off + 2 < data.size) {
             val first = data[off].toInt() and 0xFF
-            if (first == 201) {
+            // 与 iw 一致：reg_extension_id >= 201 按扩展 triplet 解析
+            if (first >= 201) {
+                extensionTriplets += CountryExtensionTriplet(
+                    regulatoryClass = data[off + 1].toInt() and 0xFF,
+                    coverageClass = data[off + 2].toInt() and 0xFF,
+                )
                 off += 3
                 continue
             }
             val count = data[off + 1].toInt() and 0xFF
-            val power = data[off + 2].toInt() and 0xFF
+            // 有符号 __s8（与 iw 一致，直接按 signed 解释）
+            val power = data[off + 2].toInt()
             triplets += CountryTriplet(
                 firstChannel = first,
                 channelCount = count,
-                maxPowerDbm = if (power == 0xFF) null else power
+                maxPowerDbm = power
             )
             off += 3
         }
-        return CountryInfo(code, environment, triplets)
+        return CountryInfo(code, environment, triplets, extensionTriplets)
     }
 
     private fun parseRsn(data: ByteArray): RsnInfo? {
@@ -617,12 +629,10 @@ object BeaconIeDecoder {
 
         val akmCount = readU16LE(data, off) ?: return null
         off += 2
-        val akms = mutableListOf<Int>()
+        val akms = mutableListOf<String>()
         repeat(akmCount) {
             if (off + 4 > data.size) return null
-            val type = data[off + 3].toInt() and 0xFF
-            akms += type
-            off += 4
+            akms += akmSuiteToString(data, off); off += 4
         }
 
         var rsnCaps = 0
@@ -647,12 +657,14 @@ object BeaconIeDecoder {
 
         val preAuth = (rsnCaps and 0x0001) != 0
         val noPairwise = (rsnCaps and 0x0002) != 0
-        val ptksaReplayCounter = ((rsnCaps shr 2) and 0x3)
+        val ptksaReplayCounter = replayCounter((rsnCaps shr 2) and 0x3)
+        val gtkReplayCounter = replayCounter((rsnCaps shr 4) and 0x3)
         val mfpRequired = (rsnCaps and 0x0040) != 0
         val mfpCapable = (rsnCaps and 0x0080) != 0
-        val gtkNotUsed = (rsnCaps and 0x0400) != 0
-        val sppAmsdu = (rsnCaps and 0x0800) != 0
         val peerKeyEnabled = (rsnCaps and 0x0200) != 0
+        val sppAmsduCapable = (rsnCaps and 0x0400) != 0
+        val sppAmsduRequired = (rsnCaps and 0x0800) != 0
+        val extendedKeyId = (rsnCaps and 0x2000) != 0
         val ocv = (rsnCaps and 0x4000) != 0
 
         return RsnInfo(
@@ -663,25 +675,58 @@ object BeaconIeDecoder {
             preAuthentication = preAuth,
             noPairwise = noPairwise,
             ptksaReplayCounter = ptksaReplayCounter,
+            gtkReplayCounter = gtkReplayCounter,
             mfpRequired = mfpRequired,
             mfpCapable = mfpCapable,
-            gtkNotUsed = gtkNotUsed,
-            sppAmsdu = sppAmsdu,
             peerKeyEnabled = peerKeyEnabled,
+            sppAmsduCapable = sppAmsduCapable,
+            sppAmsduRequired = sppAmsduRequired,
+            extendedKeyId = extendedKeyId,
             ocv = ocv,
             pmkids = pmkidList,
             groupMgmtCipher = groupMgmtCipher
         )
     }
 
+    /** RSN 的 PTKSA/GTKSA Replay Counter 编码：0=1, 1=2, 2=4, 3=16。 */
+    private fun replayCounter(code: Int): Int = when (code) {
+        0 -> 1
+        1 -> 2
+        2 -> 4
+        else -> 16
+    }
+
     private fun parseRates(data: ByteArray): List<WifiRate> =
         data.map {
             val value = it.toInt() and 0xFF
-            WifiRate(
-                mbps = (value and 0x7F) * 0.5,
-                basic = (value and 0x80) != 0
-            )
-        }
+            val r = value and 0x7F
+            val flag = (value and 0x80) != 0
+            when {
+                // 126/127 仅在 bit 7 置位时是 BSS membership selector（与 iw 一致）；
+                // 否则是保留值，不应被当作 63.0/63.5 Mbps 的“幽灵速率”。
+                r == 126 -> if (flag) WifiRate(mbps = 0.0, basic = false, membershipSelector = "VHT") else null
+                r == 127 -> if (flag) WifiRate(mbps = 0.0, basic = false, membershipSelector = "HT") else null
+                else -> WifiRate(mbps = r * 0.5, basic = flag)
+            }
+        }.filterNotNull()
+
+    /**
+     * 合并 Supported Rates 与 Extended Supported Rates 并规范化：
+     *  - 真实速率按数值升序去重（重复项取 basic 标志的并集）；
+     *  - BSS membership selector 去重后排在最后。
+     */
+    private fun normalizeRates(rates: List<WifiRate>): List<WifiRate> {
+        val normal = rates
+            .filter { it.membershipSelector == null }
+            .groupBy { it.mbps }
+            .map { (mbps, list) -> WifiRate(mbps = mbps, basic = list.any { it.basic }) }
+            .sortedBy { it.mbps }
+        val selectors = rates
+            .mapNotNull { it.membershipSelector }
+            .distinct()
+            .map { WifiRate(mbps = 0.0, basic = false, membershipSelector = it) }
+        return normal + selectors
+    }
 
     private fun parseBssLoad(data: ByteArray): BssLoad? {
         if (data.size < 5) return null
@@ -740,34 +785,87 @@ object BeaconIeDecoder {
     }
 
     /** 解析 4 字节的 cipher suite selector（3 字节 OUI + 1 字节套件类型）为可读名称。 */
-    private fun cipherSuiteToString(b: ByteArray, off: Int): String {
-        val oui = "%02X:%02X:%02X".format(
+    private fun cipherSuiteToString(b: ByteArray, off: Int): String =
+        suiteToString(b, off, cipherNames)
+
+    /** 解析 4 字节的 AKM suite selector 为可读名称。 */
+    private fun akmSuiteToString(b: ByteArray, off: Int): String =
+        suiteToString(b, off, akmNames)
+
+    /** 按 OUI + type 查表（与 iw 的 print_cipher / print_auth 行为一致）。 */
+    private fun suiteToString(b: ByteArray, off: Int, table: Map<String, Map<Int, String>>): String {
+        val oui = "%02X-%02X-%02X".format(
             b[off].toInt() and 0xFF,
             b[off + 1].toInt() and 0xFF,
             b[off + 2].toInt() and 0xFF
         )
         val type = b[off + 3].toInt() and 0xFF
-        if (oui == "00:0F:AC") {
-            return when (type) {
-                0 -> "Use group cipher suite"
-                1 -> "WEP-40"
-                2 -> "TKIP"
-                3 -> "WRAP (legacy)"
-                4 -> "CCMP (AES)"
-                5 -> "WEP-104"
-                6 -> "BIP (AES-CMAC)"
-                7 -> "Group traffic not allowed"
-                8 -> "GCMP-128"
-                9 -> "GCMP-256"
-                10 -> "CCMP-256"
-                11 -> "BIP-GMAC-128"
-                12 -> "BIP-GMAC-256"
-                13 -> "BIP-CMAC-256"
-                else -> "%s:%02X".format(oui, type)
-            }
-        }
-        return "%s:%02X".format(oui, type)
+        return table[oui]?.get(type) ?: "$oui:$type"
     }
+
+    /** cipher suite 表：OUI -> (type -> 名称)，与 iw print_cipher 一致。 */
+    private val cipherNames: Map<String, Map<Int, String>> = mapOf(
+        MS_OUI to mapOf(
+            0 to "Use group cipher suite",
+            1 to "WEP-40",
+            2 to "TKIP",
+            4 to "CCMP",
+            5 to "WEP-104",
+        ),
+        IEEE80211_OUI to mapOf(
+            0 to "Use group cipher suite",
+            1 to "WEP-40",
+            2 to "TKIP",
+            4 to "CCMP",
+            5 to "WEP-104",
+            6 to "AES-128-CMAC",
+            7 to "NO-GROUP",
+            8 to "GCMP",
+            9 to "GCMP-256",
+            11 to "BIP-GMAC-128",
+            12 to "BIP-GMAC-256",
+            13 to "BIP-CMAC-256",
+        ),
+    )
+
+    /** AKM suite 表：OUI -> (type -> 名称)，与 iw print_auth 一致。 */
+    private val akmNames: Map<String, Map<Int, String>> = mapOf(
+        MS_OUI to mapOf(
+            1 to "IEEE 802.1X",
+            2 to "PSK",
+        ),
+        IEEE80211_OUI to mapOf(
+            1 to "IEEE 802.1X",
+            2 to "PSK",
+            3 to "FT/IEEE 802.1X",
+            4 to "FT/PSK",
+            5 to "IEEE 802.1X/SHA-256",
+            6 to "PSK/SHA-256",
+            7 to "TDLS/TPK",
+            8 to "SAE",
+            9 to "FT/SAE",
+            11 to "IEEE 802.1X/SUITE-B",
+            12 to "IEEE 802.1X/SUITE-B-192",
+            13 to "FT/IEEE 802.1X/SHA-384",
+            14 to "FILS/SHA-256",
+            15 to "FILS/SHA-384",
+            16 to "FT/FILS/SHA-256",
+            17 to "FT/FILS/SHA-384",
+            18 to "OWE",
+            19 to "FT/PSK/SHA-384",
+            20 to "PSK/SHA-384",
+            24 to "SAE-EXT-KEY",
+            25 to "FT/SAE-EXT-KEY",
+        ),
+        WFA_OUI to mapOf(
+            1 to "OSEN",
+            2 to "DPP",
+        ),
+    )
+
+    private const val MS_OUI = "00-50-F2"
+    private const val IEEE80211_OUI = "00-0F-AC"
+    private const val WFA_OUI = "50-6F-9A"
 
     private fun ByteArray.toBssidString(): String =
         joinToString(":") { "%02X".format(it.toInt() and 0xFF) }

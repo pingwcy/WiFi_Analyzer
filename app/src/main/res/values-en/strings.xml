@@ -152,7 +152,9 @@
     <string name="beacon_environment_indoor_outdoor">Indoor/Outdoor</string>
     <string name="beacon_unspecified">Unspecified</string>
     <string name="beacon_channel_range">Channel Range %1$d</string>
-    <string name="beacon_country_triplet">First Channel %1$d, Count %2$d, Max Power %3$s dBm</string>
+    <string name="beacon_country_triplet">Channels [%1$d - %2$d] @ %3$s dBm</string>
+    <string name="beacon_country_ext_index">Extension %1$d</string>
+    <string name="beacon_country_ext_triplet">Regulatory Class %1$d · Coverage Class %2$d (up to %3$d m)</string>
     <string name="beacon_rates_title">Supported Rates</string>
     <string name="beacon_no_rates">No rate info</string>
     <string name="beacon_rate_index">Rate %1$d</string>
@@ -292,10 +294,7 @@
     <string name="beacon_ext_capabilities">Capability Bits</string>
     <string name="beacon_power_max">Max Transmit Power</string>
     <string name="beacon_power_max_width">Max Transmit Power (%1$s)</string>
-    <string name="beacon_power_local">Local Per-20MHz Power</string>
-    <string name="beacon_power_client">Regulatory Client %1$d</string>
     <string name="beacon_power_value">%1$s dBm</string>
-    <string name="beacon_power_category">Category %1$s</string>
     <string name="beacon_power_unavailable">Undefined</string>
     <string name="beacon_mdid">MDID</string>
     <string name="beacon_ft_over_ds">Fast BSS Transition (over DS)</string>
