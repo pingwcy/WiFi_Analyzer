@@ -11,21 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,45 +35,26 @@ import top.pingwcy.wifianalyzer.domain.AppLanguage
 import top.pingwcy.wifianalyzer.domain.ReportGenerator
 import top.pingwcy.wifianalyzer.domain.SortMode
 import top.pingwcy.wifianalyzer.ui.WifiViewModel
+import top.pingwcy.wifianalyzer.ui.component.ChannelInfoDialog
 import top.pingwcy.wifianalyzer.ui.component.SharePrivacyConfirmDialog
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
     viewModel: WifiViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val activity = LocalActivity.current
     val context = LocalContext.current
     var showShareConfirm by remember { mutableStateOf(false) }
+    var showChannelInfoDialog by remember { mutableStateOf(false) }
     val reportSubject = stringResource(R.string.report_share_subject)
     val reportTitle = stringResource(R.string.report_share_title)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.btn_back)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
             // 自动扫描开关（整行可点击）
             Row(
                 modifier = Modifier
@@ -195,7 +168,33 @@ fun SettingsScreen(
                 )
             }
 
+            HorizontalDivider()
+            Spacer(Modifier.height(12.dp))
+
+            // 本机可用信道入口
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showChannelInfoDialog = true }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.menu_local_channels),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        stringResource(R.string.settings_local_channels_desc),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            HorizontalDivider()
             Spacer(Modifier.height(24.dp))
+
             Button(
                 onClick = { showShareConfirm = true },
                 modifier = Modifier.fillMaxWidth()
@@ -203,7 +202,6 @@ fun SettingsScreen(
                 Text(stringResource(R.string.settings_export_report))
             }
         }
-    }
 
     if (showShareConfirm) {
         SharePrivacyConfirmDialog(
@@ -221,6 +219,10 @@ fun SettingsScreen(
             },
             onDismiss = { showShareConfirm = false }
         )
+    }
+
+    if (showChannelInfoDialog) {
+        ChannelInfoDialog(onDismiss = { showChannelInfoDialog = false })
     }
 }
 

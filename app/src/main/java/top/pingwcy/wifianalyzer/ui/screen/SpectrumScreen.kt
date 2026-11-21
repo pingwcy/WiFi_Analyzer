@@ -19,17 +19,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -90,13 +84,11 @@ private val apColors = listOf(
     Color(0xFFF4511E),
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpectrumScreen(
     wifiList: List<WifiData>,
     allowedChannelsByBand: Map<String, Set<Int>>,
     bandAvailabilityByBand: Map<String, BandAvailability>,
-    onBack: () -> Unit,
 ) {
     var band by remember { mutableStateOf("2.4 GHz") }
     var selectedBssid by remember(band) { mutableStateOf<String?>(null) }
@@ -113,30 +105,11 @@ fun SpectrumScreen(
     val highlightedSpectrum = selectedBssid?.let { apSpectra[it] }
     val highlightColor = selectedBssid?.let { colorByBssid[it] }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.spectrum_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.btn_back)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
             // 频段切换
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -212,20 +185,19 @@ fun SpectrumScreen(
                 return@Column
             }
 
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                items(apBands, key = { it.bssid }) { ap ->
-                    ApLegendRow(
-                        ap = ap,
-                        color = colorByBssid[ap.bssid] ?: MaterialTheme.colorScheme.primary,
-                        selected = selectedBssid == ap.bssid,
-                        onClick = {
-                            selectedBssid = if (selectedBssid == ap.bssid) null else ap.bssid
-                        }
-                    )
-                }
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            items(apBands, key = { it.bssid }) { ap ->
+                ApLegendRow(
+                    ap = ap,
+                    color = colorByBssid[ap.bssid] ?: MaterialTheme.colorScheme.primary,
+                    selected = selectedBssid == ap.bssid,
+                    onClick = {
+                        selectedBssid = if (selectedBssid == ap.bssid) null else ap.bssid
+                    }
+                )
             }
         }
     }

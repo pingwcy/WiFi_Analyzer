@@ -19,27 +19,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.WifiFind
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -54,7 +44,6 @@ import top.pingwcy.wifianalyzer.model.BandFilter
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.model.groupKey
 import top.pingwcy.wifianalyzer.ui.WifiViewModel
-import top.pingwcy.wifianalyzer.ui.component.ChannelInfoDialog
 import top.pingwcy.wifianalyzer.ui.component.FilterChipRow
 import top.pingwcy.wifianalyzer.ui.component.WifiCard
 import top.pingwcy.wifianalyzer.ui.component.WifiGroupHeader
@@ -85,20 +74,14 @@ fun buildWifiGroups(list: List<WifiData>): List<WifiGroup> =
                 .thenBy { it.ssid }
         )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WifiScannerScreen(
     onItemClick: (WifiData) -> Unit,
-    onOpenChannelAnalysis: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenSpectrum: () -> Unit,
     viewModel: WifiViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val bandFilter = uiState.bandFilter
-    var showMenu by remember { mutableStateOf(false) }
-    var showChannelInfoDialog by remember { mutableStateOf(false) }
 
     val permissionsToRequest = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -142,60 +125,11 @@ fun WifiScannerScreen(
         uiState.wifiList.filter(bandFilter.match)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
-                actions = {
-                    IconButton(onClick = { showMenu = !showMenu }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.menu_more))
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_channel_analysis)) },
-                            onClick = {
-                                showMenu = false
-                                onOpenChannelAnalysis()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_local_channels)) },
-                            onClick = {
-                                showMenu = false
-                                showChannelInfoDialog = true
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_spectrum)) },
-                            onClick = {
-                                showMenu = false
-                                onOpenSpectrum()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_settings)) },
-                            onClick = {
-                                showMenu = false
-                                onOpenSettings()
-                            }
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
             Button(
                 onClick = {
                     val allGranted = permissionsToRequest.all {
@@ -355,9 +289,5 @@ fun WifiScannerScreen(
                 }
             }
         }
-    }
 
-    if (showChannelInfoDialog) {
-        ChannelInfoDialog(onDismiss = { showChannelInfoDialog = false })
-    }
 }

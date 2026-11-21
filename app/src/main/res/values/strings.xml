@@ -8,6 +8,12 @@
     <string name="menu_switch_to_flat">切换为：全部列表</string>
     <string name="menu_switch_to_grouped">切换为：按 SSID 聚合</string>
 
+    <!-- 底部导航 -->
+    <string name="nav_list">列表</string>
+    <string name="nav_channels">信道</string>
+    <string name="nav_spectrum">频谱</string>
+    <string name="nav_settings">设置</string>
+
     <!-- 主界面 -->
     <string name="btn_start_scan">开始扫描 WiFi</string>
     <string name="btn_scanning">扫描中…</string>
@@ -256,6 +262,7 @@
     <!-- ===== 设置页 ===== -->
     <string name="menu_settings">设置</string>
     <string name="settings_title">设置</string>
+    <string name="settings_local_channels_desc">查看设备监管域允许使用的信道</string>
     <string name="settings_auto_scan_title">自动扫描</string>
     <string name="settings_auto_scan_desc">打开应用时自动扫描附近的 WiFi</string>
     <string name="settings_view_mode_title">默认视图模式</string>

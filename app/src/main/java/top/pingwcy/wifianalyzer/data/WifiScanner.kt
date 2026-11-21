@@ -6,7 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.wifi.WifiManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import top.pingwcy.wifianalyzer.domain.WifiRepository
 import top.pingwcy.wifianalyzer.model.WifiData
@@ -56,8 +58,11 @@ class WifiScanner(private val context: Context) : WifiRepository {
             }
         }
 
-        return wifiManager.scanResults
-            .map { it.toWifiData() }
-            .sortedByDescending { it.rssi }
+        val raw = wifiManager.scanResults
+        // Beacon IE 解析较重，移到后台线程，避免扫描时阻塞主线程导致掉帧。
+        return withContext(Dispatchers.Default) {
+            raw.map { it.toWifiData() }
+                .sortedByDescending { it.rssi }
+        }
     }
 }

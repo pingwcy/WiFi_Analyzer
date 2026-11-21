@@ -18,25 +18,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.TipsAndUpdates
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,16 +50,13 @@ import top.pingwcy.wifianalyzer.domain.ChannelUsage
 import top.pingwcy.wifianalyzer.model.WifiData
 import top.pingwcy.wifianalyzer.ui.component.BandNotSupportedHint
 import top.pingwcy.wifianalyzer.ui.component.ChannelBarRow
-import top.pingwcy.wifianalyzer.ui.component.ChannelInfoDialog
 import top.pingwcy.wifianalyzer.ui.component.ChannelScoreDialog
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChannelAnalysisScreen(
     wifiList: List<WifiData>,
     allowedChannelsByBand: Map<String, Set<Int>>,
     bandAvailabilityByBand: Map<String, BandAvailability>,
-    onBack: () -> Unit,
 ) {
     var band by remember { mutableStateOf<String?>(null) }
     var useOccupied by remember { mutableStateOf(true) }
@@ -75,8 +64,6 @@ fun ChannelAnalysisScreen(
     var ignoreWeak by remember { mutableStateOf(false) }
     var weakThreshold by remember { mutableStateOf(-82) }
     var selectedChannel by remember { mutableStateOf<ChannelUsage?>(null) }
-    var showMenu by remember { mutableStateOf(false) }
-    var showChannelInfoDialog by remember { mutableStateOf(false) }
     var showRecommendation by remember { mutableStateOf(true) }
 
     // 数据分析
@@ -98,53 +85,11 @@ fun ChannelAnalysisScreen(
         band?.let { ChannelRecommender.recommend(wifiList, it, allowedChannelsByBand[it]) }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.channel_analysis_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.btn_back))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showMenu = !showMenu }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.menu_more))
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_local_channels)) },
-                            onClick = {
-                                showMenu = false
-                                showChannelInfoDialog = true
-                            }
-                        )
-                        if (!showRecommendation && band != null) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_show_recommendation)) },
-                                onClick = {
-                                    showMenu = false
-                                    showRecommendation = true
-                                }
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
             // 频段筛选
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -187,6 +132,28 @@ fun ChannelAnalysisScreen(
                 recommendation?.let {
                     RecommendationCard(it, onClose = { showRecommendation = false })
                     Spacer(Modifier.height(8.dp))
+                }
+            } else if (band != null) {
+                // 推荐卡片被关闭后，提供内联入口重新显示
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showRecommendation = true }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.TipsAndUpdates,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.menu_show_recommendation),
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 
@@ -263,24 +230,19 @@ fun ChannelAnalysisScreen(
                 return@Column
             }
 
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(usage) { item ->
-                    ChannelBarRow(
-                        item = item,
-                        maxLoad = maxLoad,
-                        onClick = { selectedChannel = item }
-                    )
-                }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(usage) { item ->
+                ChannelBarRow(
+                    item = item,
+                    maxLoad = maxLoad,
+                    onClick = { selectedChannel = item }
+                )
             }
         }
     }
 
     selectedChannel?.let { item ->
         ChannelScoreDialog(item = item, onDismiss = { selectedChannel = null })
-    }
-
-    if (showChannelInfoDialog) {
-        ChannelInfoDialog(onDismiss = { showChannelInfoDialog = false })
     }
 }
 
