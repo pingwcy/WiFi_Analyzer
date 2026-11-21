@@ -54,6 +54,15 @@ private fun BeaconRow(
 private fun yesNo(value: Boolean): String =
     stringResource(if (value) R.string.yes else R.string.no)
 
+private fun powerWidthLabel(index: Int): String = when (index) {
+    0 -> "20 MHz"
+    1 -> "40 MHz"
+    2 -> "80 MHz"
+    3 -> "160 MHz"
+    4 -> "80+80 MHz"
+    else -> "CH ${index + 1}"
+}
+
 @Composable
 fun BeaconInfoSections(beacon: BeaconInfo?) {
     ExpandableDetailSection(
@@ -79,9 +88,15 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                 Text(stringResource(R.string.beacon_country_not_found))
             } else {
                 BeaconRow(stringResource(R.string.beacon_country_code), country.countryCode)
+                val environmentText = when (country.environment) {
+                    CountryEnvironment.INDOOR -> stringResource(R.string.beacon_environment_indoor)
+                    CountryEnvironment.OUTDOOR -> stringResource(R.string.beacon_environment_outdoor)
+                    CountryEnvironment.INDOOR_OUTDOOR -> stringResource(R.string.beacon_environment_indoor_outdoor)
+                    null -> stringResource(R.string.beacon_unspecified)
+                }
                 BeaconRow(
                     stringResource(R.string.beacon_environment),
-                    country.environment?.toString() ?: stringResource(R.string.beacon_unspecified)
+                    environmentText
                 )
 
                 country.triplets.forEachIndexed { index, triplet ->
@@ -204,6 +219,7 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                     BeaconRow("Max A-MPDU", stringResource(R.string.beacon_bytes, it))
                 }
                 BeaconRow("STBC RX streams", ht.stbcRxStreams.toString())
+                ht.rxNss?.let { BeaconRow("Rx NSS", it.toString()) }
                 ht.primaryChannel?.let {
                     BeaconRow("HT 主信道", it.toString())
                 }
@@ -247,6 +263,8 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                 BeaconRow("RX STBC", vht.rxStbc.toString())
                 BeaconRow("SU Beamformer", yesNo(vht.suBeamformer))
                 BeaconRow("MU Beamformer", yesNo(vht.muBeamformer))
+                vht.rxNss?.let { BeaconRow("Rx NSS", it.toString()) }
+                vht.txNss?.let { BeaconRow("Tx NSS", it.toString()) }
 
                 vht.centerFreqSeg0?.let {
                     BeaconRow("中心频率段 0", "$it")
@@ -276,6 +294,8 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                 BeaconRow("SU Beamformee", yesNo(he.suBeamformee))
                 BeaconRow("MU Beamformer", yesNo(he.muBeamformer))
                 BeaconRow("160 MHz", yesNo(he.channelWidth160))
+                he.rxNss?.let { BeaconRow("Rx NSS", it.toString()) }
+                he.txNss?.let { BeaconRow("Tx NSS", it.toString()) }
 
                 RawDataText(he.rxMcsNss, stringResource(R.string.beacon_he_rx_mcs))
                 RawDataText(he.operation, stringResource(R.string.beacon_he_operation))
@@ -357,10 +377,25 @@ fun BeaconInfoSections(beacon: BeaconInfo?) {
                 fun fmt(v: Double?): String =
                     v?.let { String.format(Locale.US, "%.1f", it) } ?: undefined
 
-                BeaconRow(
-                    label = stringResource(R.string.beacon_power_max),
-                    value = stringResource(R.string.beacon_power_value, fmt(power.maxTransmitPowerDbm))
-                )
+                val maxPowers = power.maxTransmitPowersDbm
+                if (maxPowers.isEmpty()) {
+                    BeaconRow(
+                        label = stringResource(R.string.beacon_power_max),
+                        value = undefined
+                    )
+                } else {
+                    maxPowers.forEachIndexed { index, p ->
+                        val label = if (maxPowers.size > 1) {
+                            stringResource(R.string.beacon_power_max_width, powerWidthLabel(index))
+                        } else {
+                            stringResource(R.string.beacon_power_max)
+                        }
+                        BeaconRow(
+                            label = label,
+                            value = stringResource(R.string.beacon_power_value, fmt(p))
+                        )
+                    }
+                }
                 BeaconRow(
                     label = stringResource(R.string.beacon_power_local),
                     value = stringResource(R.string.beacon_power_value, fmt(power.localMaxTransmitPowerDbm))

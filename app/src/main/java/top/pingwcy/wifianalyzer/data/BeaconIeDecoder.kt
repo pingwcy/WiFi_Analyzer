@@ -272,24 +272,35 @@ object BeaconIeDecoder {
             return value / 2.0
         }
 
-        val maxPower = decodePower(data[0].toInt())
-        val localMaxPower = decodePower(data[1].toInt())
+        // 布局：Maximum Transmit Power Count(1) + Maximum Transmit Power(Count)
+        //       + Maximum Transmit Power per 20 MHz(1) + Transmit Power Information(2 字节一组)
+        val count = data[0].toInt() and 0xFF
+        var off = 1
+
+        val maxPowers = mutableListOf<Double?>()
+        var remaining = count
+        while (remaining > 0 && off < data.size) {
+            maxPowers += decodePower(data[off].toInt())
+            off++
+            remaining--
+        }
+
+        val localMaxPower = if (off < data.size) decodePower(data[off].toInt()) else null
+        off++
 
         val clientInfos = mutableListOf<RegulatoryClientInfo>()
-        var off = 2
         while (off + 1 < data.size) {
             val clientPower = decodePower(data[off].toInt())
             val category = data[off + 1].toInt() and 0xFF
-            val catValue = if (category == 0) null else category
             clientInfos += RegulatoryClientInfo(
                 maxTransmitPowerDbm = clientPower,
-                maxTransmitPowerCategory = catValue,
+                maxTransmitPowerCategory = if (category == 0) null else category,
             )
             off += 2
         }
 
         return PowerEnvelopeInfo(
-            maxTransmitPowerDbm = maxPower,
+            maxTransmitPowersDbm = maxPowers,
             localMaxTransmitPowerDbm = localMaxPower,
             regulatoryClientInfos = clientInfos,
         )
@@ -388,6 +399,7 @@ object BeaconIeDecoder {
                 3 -> 65535
                 else -> null
             }
+            val rxNss = htRxNss(mcs)
             val sgi20 = (caps and 0x0020) != 0
             val sgi40 = (caps and 0x0040) != 0
             val htGreenfield = (caps and 0x0010) != 0
@@ -408,7 +420,8 @@ object BeaconIeDecoder {
                 greenfield = htGreenfield, ldpc = ldpc,
                 fortyMhzSupported = fortyMhz,
                 maxAmpduLength = maxAmpdu,
-                stbcRxStreams = stbc
+                stbcRxStreams = stbc,
+                rxNss = rxNss
             )
         }
         return HtInfo(
@@ -460,7 +473,9 @@ object BeaconIeDecoder {
                 rxLdpc = rxLdpc, sgi80 = sgi80, sgi160 = sgi160,
                 txStbc = txStbc, rxStbc = rxStbc,
                 suBeamformer = suBeamformer,
-                muBeamformer = muBeamformer
+                muBeamformer = muBeamformer,
+                rxNss = rxMcs?.let { countNss(it) },
+                txNss = txMcs?.let { countNss(it) }
             )
         }
         return VhtInfo(
@@ -491,6 +506,8 @@ object BeaconIeDecoder {
             val mac = data.copyOfRange(0, 6)
             val phy = data.copyOfRange(6, 17)
             val mcs = data.copyOfRange(17, 21)
+            val rxMcs = readU16LE(mcs, 0)
+            val txMcs = readU16LE(mcs, 2)
             return (existing ?: emptyHe()).copy(
                 macCapabilities = mac,
                 phyCapabilities = phy,
@@ -504,7 +521,9 @@ object BeaconIeDecoder {
                 suBeamformer = (phy[0].toInt() and 0x01) != 0,
                 suBeamformee = (phy[0].toInt() and 0x02) != 0,
                 muBeamformer = (phy[0].toInt() and 0x04) != 0,
-                channelWidth160 = (phy[1].toInt() and 0x80) != 0
+                channelWidth160 = (phy[1].toInt() and 0x80) != 0,
+                rxNss = rxMcs?.let { countNss(it) },
+                txNss = txMcs?.let { countNss(it) }
             )
         }
         return (existing ?: emptyHe()).copy(operation = existing?.operation)
@@ -550,9 +569,11 @@ object BeaconIeDecoder {
         val code = String(data.copyOfRange(0, 2), Charsets.US_ASCII)
         if (!code.matches(Regex("[A-Z]{2}"))) return null
         val envByte = data[2].toInt() and 0xFF
-        val env = when (envByte) {
-            'I'.code, 'O'.code, ' '.code -> envByte.toChar()
-            else -> null
+        val environment = when (envByte) {
+            'I'.code -> CountryEnvironment.INDOOR
+            'O'.code -> CountryEnvironment.OUTDOOR
+            'X'.code -> CountryEnvironment.INDOOR_OUTDOOR
+            else -> null // ' '（空格）、0x00 等均视为未指定
         }
 
         val triplets = mutableListOf<CountryTriplet>()
@@ -572,7 +593,7 @@ object BeaconIeDecoder {
             )
             off += 3
         }
-        return CountryInfo(code, env, triplets)
+        return CountryInfo(code, environment, triplets)
     }
 
     private fun parseRsn(data: ByteArray): RsnInfo? {
@@ -583,7 +604,7 @@ object BeaconIeDecoder {
         off += 2
 
         if (off + 4 > data.size) return null
-        val groupCipher = ouiToString(data, off)
+        val groupCipher = cipherSuiteToString(data, off)
         off += 4
 
         val pairwiseCount = readU16LE(data, off) ?: return null
@@ -591,7 +612,7 @@ object BeaconIeDecoder {
         val pairwise = mutableListOf<String>()
         repeat(pairwiseCount) {
             if (off + 4 > data.size) return null
-            pairwise += ouiToString(data, off); off += 4
+            pairwise += cipherSuiteToString(data, off); off += 4
         }
 
         val akmCount = readU16LE(data, off) ?: return null
@@ -621,7 +642,7 @@ object BeaconIeDecoder {
         }
 
         val groupMgmtCipher = if (off + 4 <= data.size) {
-            ouiToString(data, off)
+            cipherSuiteToString(data, off)
         } else null
 
         val preAuth = (rsnCaps and 0x0001) != 0
@@ -685,12 +706,68 @@ object BeaconIeDecoder {
 
     // ============ 工具函数 ============
 
-    private fun ouiToString(b: ByteArray, off: Int): String =
-        "%02X:%02X:%02X".format(
+    /**
+     * 从 VHT/HE 的 MCS/NSS Map 计算支持的空间流数量。
+     *
+     * VHT/HE 均用每 2 bits 表示一个 NSS（NSS1 在 bit 0-1），值 3 表示不支持。
+     */
+    private fun countNss(mcsMap: Int): Int {
+        var n = 0
+        for (i in 0 until 8) {
+            if (((mcsMap shr (i * 2)) and 0x3) != 3) n++
+        }
+        return n
+    }
+
+    /**
+     * 从 802.11n 的 Rx MCS Bitmask 推算 Rx 空间流数量。
+     *
+     * HT 的 MCS 索引按流划分：MCS 0-7=1 流、8-15=2 流、16-23=3 流、24-31=4 流。
+     * 取最高置位 MCS，即得 NSS = maxMcs / 8 + 1。
+     */
+    private fun htRxNss(mcsSet: ByteArray): Int {
+        var maxMcs = -1
+        val limit = mcsSet.size.coerceAtMost(10)
+        for (byteIndex in 0 until limit) {
+            val b = mcsSet[byteIndex].toInt() and 0xFF
+            if (b == 0) continue
+            var bit = 7
+            while (bit >= 0 && (b and (1 shl bit)) == 0) bit--
+            val mcs = byteIndex * 8 + bit
+            if (mcs > maxMcs) maxMcs = mcs
+        }
+        return if (maxMcs >= 0) maxMcs / 8 + 1 else 0
+    }
+
+    /** 解析 4 字节的 cipher suite selector（3 字节 OUI + 1 字节套件类型）为可读名称。 */
+    private fun cipherSuiteToString(b: ByteArray, off: Int): String {
+        val oui = "%02X:%02X:%02X".format(
             b[off].toInt() and 0xFF,
             b[off + 1].toInt() and 0xFF,
             b[off + 2].toInt() and 0xFF
         )
+        val type = b[off + 3].toInt() and 0xFF
+        if (oui == "00:0F:AC") {
+            return when (type) {
+                0 -> "Use group cipher suite"
+                1 -> "WEP-40"
+                2 -> "TKIP"
+                3 -> "WRAP (legacy)"
+                4 -> "CCMP (AES)"
+                5 -> "WEP-104"
+                6 -> "BIP (AES-CMAC)"
+                7 -> "Group traffic not allowed"
+                8 -> "GCMP-128"
+                9 -> "GCMP-256"
+                10 -> "CCMP-256"
+                11 -> "BIP-GMAC-128"
+                12 -> "BIP-GMAC-256"
+                13 -> "BIP-CMAC-256"
+                else -> "%s:%02X".format(oui, type)
+            }
+        }
+        return "%s:%02X".format(oui, type)
+    }
 
     private fun ByteArray.toBssidString(): String =
         joinToString(":") { "%02X".format(it.toInt() and 0xFF) }

@@ -5,6 +5,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import top.pingwcy.wifianalyzer.model.CountryEnvironment
 
 class BeaconIeDecoderTest {
 
@@ -87,9 +88,28 @@ class BeaconIeDecoderTest {
 
         assertNotNull(info.rsn)
         assertEquals(1, info.rsn!!.version)
-        assertEquals("00:0F:AC", info.rsn!!.groupCipher)
-        assertEquals(listOf("00:0F:AC"), info.rsn!!.pairwiseCiphers)
+        assertEquals("CCMP (AES)", info.rsn!!.groupCipher)
+        assertEquals(listOf("CCMP (AES)"), info.rsn!!.pairwiseCiphers)
         assertEquals(listOf(2), info.rsn!!.akmSuites)
+    }
+
+    @Test
+    fun `解析Rsn_TKIP组播和CCMP单播`() {
+        // group=TKIP(00-0F-AC-02), pairwise=CCMP(00-0F-AC-04)
+        val bytes = byteArrayOf(
+            0x01, 0x00,
+            0x00, 0x0F, 0xAC.toByte(), 0x02,   // group TKIP
+            0x01, 0x00,
+            0x00, 0x0F, 0xAC.toByte(), 0x04,   // pairwise CCMP
+            0x01, 0x00,
+            0x00, 0x0F, 0xAC.toByte(), 0x02,   // akm PSK
+            0x00, 0x00,
+        )
+        val info = BeaconIeDecoder.decode(listOf(IeData(id = 48, idExt = -1, bytes = bytes)))
+
+        assertNotNull(info.rsn)
+        assertEquals("TKIP", info.rsn!!.groupCipher)
+        assertEquals(listOf("CCMP (AES)"), info.rsn!!.pairwiseCiphers)
     }
 
     @Test
@@ -146,16 +166,28 @@ class BeaconIeDecoderTest {
 
     @Test
     fun `解析PowerEnvelope_功率值`() {
-        // max=20dBm(0x28), local=20dBm(0x28), client=18dBm(0x24) category 1
-        val bytes = byteArrayOf(0x28, 0x28, 0x24, 0x01)
+        // count=1, max=20dBm(0x28), per20=20dBm(0x28), client=18dBm(0x24) category 1
+        val bytes = byteArrayOf(0x01, 0x28, 0x28, 0x24, 0x01)
         val info = BeaconIeDecoder.decode(listOf(IeData(id = 195, idExt = -1, bytes = bytes)))
 
         assertNotNull(info.powerEnvelope)
-        assertEquals(20.0, info.powerEnvelope!!.maxTransmitPowerDbm!!, 0.001)
+        assertEquals(listOf(20.0), info.powerEnvelope!!.maxTransmitPowersDbm)
         assertEquals(20.0, info.powerEnvelope!!.localMaxTransmitPowerDbm!!, 0.001)
         assertEquals(1, info.powerEnvelope!!.regulatoryClientInfos.size)
         assertEquals(18.0, info.powerEnvelope!!.regulatoryClientInfos[0].maxTransmitPowerDbm!!, 0.001)
         assertEquals(1, info.powerEnvelope!!.regulatoryClientInfos[0].maxTransmitPowerCategory)
+    }
+
+    @Test
+    fun `解析PowerEnvelope_多信道宽度功率`() {
+        // 真实抓包：count=2, 20MHz=24dBm(0x30), 40MHz=24dBm(0x30), per20=24dBm(0x30)
+        val bytes = byteArrayOf(0x02, 0x30, 0x30, 0x30)
+        val info = BeaconIeDecoder.decode(listOf(IeData(id = 195, idExt = -1, bytes = bytes)))
+
+        assertNotNull(info.powerEnvelope)
+        assertEquals(listOf(24.0, 24.0), info.powerEnvelope!!.maxTransmitPowersDbm)
+        assertEquals(24.0, info.powerEnvelope!!.localMaxTransmitPowerDbm!!, 0.001)
+        assertTrue(info.powerEnvelope!!.regulatoryClientInfos.isEmpty())
     }
 
     @Test
@@ -207,5 +239,62 @@ class BeaconIeDecoderTest {
         assertEquals(1, info.multipleBssid[0].profiles.size)
         assertEquals(0, info.multipleBssid[0].profiles[0].subelementId)
         assertEquals(2, info.multipleBssid[0].profiles[0].data.size)
+    }
+
+    @Test
+    fun `解析Country_环境字段`() {
+        fun env(code: Char) = BeaconIeDecoder.decode(
+            listOf(IeData(id = 7, idExt = -1, bytes = byteArrayOf('C'.code.toByte(), 'N'.code.toByte(), code.code.toByte())))
+        ).country!!.environment
+
+        assertEquals(CountryEnvironment.INDOOR, env('I'))
+        assertEquals(CountryEnvironment.OUTDOOR, env('O'))
+        assertEquals(CountryEnvironment.INDOOR_OUTDOOR, env('X'))
+        assertNull(env(' '))
+        assertNull(env('\u0000'))
+    }
+
+    @Test
+    fun `解析Vht_MIMO空间流数量`() {
+        // 真实抓包：Rx MCS=0xFFF5、Tx MCS=0xFFF5 -> 各支持 2 个 NSS
+        val bytes = byteArrayOf(
+            0xB1.toByte(), 0x21, 0x81.toByte(), 0x03,   // capabilities
+            0xF5.toByte(), 0xFF.toByte(),               // rx mcs
+            0x00, 0x00,                                 // rx highest
+            0xF5.toByte(), 0xFF.toByte(),               // tx mcs
+            0x00, 0x00,                                 // tx highest
+        )
+        val info = BeaconIeDecoder.decode(listOf(IeData(id = 191, idExt = -1, bytes = bytes)))
+
+        assertNotNull(info.vht)
+        assertEquals(2, info.vht!!.rxNss)
+        assertEquals(2, info.vht!!.txNss)
+    }
+
+    @Test
+    fun `解析He_MIMO空间流数量`() {
+        // 真实抓包：≤80MHz MCS=FA FF FA FF -> Rx/Tx 各 2 个 NSS
+        val bytes = byteArrayOf(
+            0x09, 0x00, 0x08, 0x12, 0x00, 0x10,           // mac capabilities
+            0x00, 0x20, 0x02, 0x40, 0x01, 0x00, 0x80.toByte(), 0x00, 0x00, 0x0C, 0x00, // phy capabilities
+            0xFA.toByte(), 0xFF.toByte(), 0xFA.toByte(), 0xFF.toByte(), // mcs/nss set
+        )
+        val info = BeaconIeDecoder.decode(listOf(IeData(id = 255, idExt = 35, bytes = bytes)))
+
+        assertNotNull(info.he)
+        assertEquals(2, info.he!!.rxNss)
+        assertEquals(2, info.he!!.txNss)
+    }
+
+    @Test
+    fun `解析Ht_Rx空间流数量`() {
+        // HT Capabilities：Rx MCS 0-15 全置位 -> 2 流
+        val bytes = ByteArray(26)
+        bytes[3] = 0xFF.toByte() // MCS 0-7
+        bytes[4] = 0xFF.toByte() // MCS 8-15
+        val info = BeaconIeDecoder.decode(listOf(IeData(id = 45, idExt = -1, bytes = bytes)))
+
+        assertNotNull(info.ht)
+        assertEquals(2, info.ht!!.rxNss)
     }
 }

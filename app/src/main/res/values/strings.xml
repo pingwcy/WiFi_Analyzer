@@ -160,6 +160,9 @@
     <string name="beacon_country_not_found">未获取到 Country IE</string>
     <string name="beacon_country_code">国家代码</string>
     <string name="beacon_environment">环境</string>
+    <string name="beacon_environment_indoor">室内（Indoor）</string>
+    <string name="beacon_environment_outdoor">室外（Outdoor）</string>
+    <string name="beacon_environment_indoor_outdoor">室内/室外（Indoor/Outdoor）</string>
     <string name="beacon_unspecified">未指定</string>
     <string name="beacon_channel_range">信道范围 %1$d</string>
     <string name="beacon_country_triplet">起始信道 %1$d，数量 %2$d，最大功率 %3$s dBm</string>
@@ -301,6 +304,7 @@
     <string name="beacon_no_capabilities">无</string>
     <string name="beacon_ext_capabilities">能力位</string>
     <string name="beacon_power_max">最大发射功率</string>
+    <string name="beacon_power_max_width">最大发射功率（%1$s）</string>
     <string name="beacon_power_local">本地每 20MHz 功率</string>
     <string name="beacon_power_client">监管客户端 %1$d</string>
     <string name="beacon_power_value">%1$s dBm</string>

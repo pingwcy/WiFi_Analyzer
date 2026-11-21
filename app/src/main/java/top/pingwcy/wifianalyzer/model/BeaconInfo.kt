@@ -51,9 +51,16 @@ data class WifiRate(
     val basic: Boolean
 )
 
+/** Country IE 中的环境字段（室内/室外）。 */
+enum class CountryEnvironment {
+    INDOOR,
+    OUTDOOR,
+    INDOOR_OUTDOOR,
+}
+
 data class CountryInfo(
     val countryCode: String,
-    val environment: Char?,
+    val environment: CountryEnvironment?,
     val triplets: List<CountryTriplet>
 )
 
@@ -95,7 +102,7 @@ data class ExtendedCapabilitiesInfo(
 
 /** Transmit Power Envelope（元素 195）的解析结果。 */
 data class PowerEnvelopeInfo(
-    val maxTransmitPowerDbm: Double?,        // 本地最大发射功率（dBm）
+    val maxTransmitPowersDbm: List<Double?>, // 各信道宽度最大发射功率（dBm），按 20/40/80/160/80+80 顺序
     val localMaxTransmitPowerDbm: Double?,   // 本地每 20MHz 最大发射功率（dBm）
     val regulatoryClientInfos: List<RegulatoryClientInfo>,
 )
@@ -151,6 +158,7 @@ data class HtInfo(
     val fortyMhzSupported: Boolean = false,
     val maxAmpduLength: Int? = null,
     val stbcRxStreams: Int = 0,
+    val rxNss: Int? = null,
     // HT Operation 相关
     val primaryChannel: Int? = null,
     val secondaryChannelOffset: Int? = null,
@@ -172,6 +180,8 @@ data class VhtInfo(
     val rxStbc: Int = 0,
     val suBeamformer: Boolean = false,
     val muBeamformer: Boolean = false,
+    val rxNss: Int? = null,
+    val txNss: Int? = null,
     // VHT Operation 相关
     val channelWidth: Int? = null,
     val centerFreqSeg0: Int? = null,
@@ -192,7 +202,9 @@ data class HeInfo(
     val suBeamformer: Boolean = false,
     val suBeamformee: Boolean = false,
     val muBeamformer: Boolean = false,
-    val channelWidth160: Boolean = false
+    val channelWidth160: Boolean = false,
+    val rxNss: Int? = null,
+    val txNss: Int? = null
 )
 
 data class EhtInfo(
